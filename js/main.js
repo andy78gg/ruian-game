@@ -10,6 +10,7 @@ import { createHeld } from './held.js';
 import { createInventory } from './inventory.js';
 import { createGather } from './gather.js';
 import { createBuilding } from './building.js';
+import { createEnemies } from './enemies.js';
 
 // ---------- 场景 ----------
 const scene = new THREE.Scene();
@@ -143,6 +144,16 @@ const player = {
 };
 camera.position.set(0, player.y + EYE_HEIGHT, 0);
 
+// ---------- 敌人 AI ----------
+const enemies = createEnemies({
+  scene,
+  heightAt,
+  player,
+  survival,
+  dayNight,
+  onTip: showTip,
+});
+
 // ---------- 实体碰撞：树 / 岩石圆形推挤，墙板 AABB 推挤 ----------
 const PLAYER_RADIUS = 0.35;
 
@@ -233,7 +244,7 @@ canvas.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
     held.triggerSwing();
     if (building.buildMode) building.place(player);
-    else gather.tryHit();
+    else if (!enemies.tryHit(camera)) gather.tryHit();
   } else if (e.button === 2) {
     if (building.buildMode) building.removeAt(camera);
     else tryEat();
@@ -262,6 +273,7 @@ function animate() {
   survival.update(dt);
   held.update(dt);
   building.update(player);
+  enemies.update(dt);
 
   const speed = keys['ShiftLeft'] || keys['ShiftRight'] ? 9 : 5;
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));

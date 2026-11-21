@@ -90,7 +90,7 @@ export function createDayNight({ scene, sun, hemi }) {
     sun.intensity = Math.max(0, elevation) * 2.0;
     sun.color.copy(SUN_DAY).lerp(SUN_DUSK, duskFactor);
 
-    hemi.intensity = 0.28 + dayFactor * 0.72;
+    hemi.intensity = 0.4 + dayFactor * 0.6;
 
     skyColor.copy(SKY_NIGHT).lerp(SKY_DAY, dayFactor);
     skyColor.lerp(SKY_DUSK, duskFactor * 0.6);

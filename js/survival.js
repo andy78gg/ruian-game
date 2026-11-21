@@ -27,5 +27,9 @@ export function createSurvival() {
     state.health = Math.min(100, state.health + 10);
   }
 
-  return { state, update, eat };
+  function damage(n) {
+    state.health = Math.max(0, state.health - n);
+  }
+
+  return { state, update, eat, damage };
 }

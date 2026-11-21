@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
 const TRUNK_COLOR = 0x4a3320;
-const LEAF_DARK = [0x2c5226, 0x35602c, 0x274a22];
-const LEAF_LIGHT = [0x4a7a38, 0x568a40, 0x3f6f31];
+const LEAF_DARK = [0x2f5a2a, 0x3a6830, 0x2a4f25];
+const LEAF_LIGHT = [0x52843e, 0x5e9248, 0x477a36];
 
-// 在地形上随机放置树木：阔叶橡树 / 尖冠松树两种，树干粗、冠幅小、整体高挑
+// 在地形上随机放置树木：阔叶橡树 / 尖冠松树，细树干、窄冠幅、整体高挑
 export function buildTrees(heightAt, count = 90) {
   const group = new THREE.Group();
   const trees = [];
@@ -30,18 +30,18 @@ export function buildTrees(heightAt, count = 90) {
     attempts++;
     const x = (Math.random() - 0.5) * 100;
     const z = (Math.random() - 0.5) * 100;
-    if (Math.hypot(x, z) < 8) continue; // 留出出生点
+    if (Math.hypot(x, z) < 10) continue; // 留出出生点
 
     const y = heightAt(x, z);
-    const scale = 2.6 + Math.random() * 1.8; // 整体高度不变（高挑）
+    const scale = 2.0 + Math.random() * 1.0; // 高挑但不粗壮
     const pine = Math.random() < 0.45;
 
     const tree = new THREE.Group();
 
-    // 两段式粗树干：下粗上细，高度保持不变
+    // 两段式细树干：下粗上细，高度保持
     const trunkH = 2.0 * scale;
     const lower = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.34 * scale, 0.55 * scale, trunkH * 0.55, 7),
+      new THREE.CylinderGeometry(0.2 * scale, 0.33 * scale, trunkH * 0.55, 7),
       trunkMat
     );
     lower.position.y = (trunkH * 0.55) / 2;
@@ -49,7 +49,7 @@ export function buildTrees(heightAt, count = 90) {
     tree.add(lower);
 
     const upper = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22 * scale, 0.34 * scale, trunkH * 0.55, 7),
+      new THREE.CylinderGeometry(0.13 * scale, 0.2 * scale, trunkH * 0.55, 7),
       trunkMat
     );
     upper.position.y = trunkH * 0.55 + (trunkH * 0.55) / 2;
@@ -57,23 +57,23 @@ export function buildTrees(heightAt, count = 90) {
     tree.add(upper);
 
     if (pine) {
-      // 四层逐层收窄的锥形松树，冠幅收小、层叠高度保持
+      // 四层逐层收窄的锥形松树，冠幅收窄
       const layers = 4;
       for (let l = 0; l < layers; l++) {
-        const r = (1.15 - l * 0.24) * scale;
-        const h = 1.2 * scale;
+        const r = (0.9 - l * 0.2) * scale;
+        const h = 1.1 * scale;
         const cone = new THREE.Mesh(
           new THREE.ConeGeometry(r, h, 8),
           pick(leafDarkMats)
         );
-        cone.position.y = trunkH * 0.55 + l * 0.78 * scale + h * 0.35;
+        cone.position.y = trunkH * 0.55 + l * 0.72 * scale + h * 0.35;
         cone.castShadow = true;
         tree.add(cone);
       }
     } else {
-      // 阔叶橡树：一团主冠 + 2~3 团错落侧冠，冠幅收小、位置高度保持
+      // 阔叶橡树：一团主冠 + 2~3 团错落侧冠，窄冠幅
       const crown = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(1.15 * scale, 1),
+        new THREE.IcosahedronGeometry(0.9 * scale, 1),
         pick(leafLightMats)
       );
       crown.position.y = trunkH + 0.9 * scale;
@@ -84,8 +84,8 @@ export function buildTrees(heightAt, count = 90) {
       const blobs = 2 + Math.floor(Math.random() * 2);
       for (let b = 0; b < blobs; b++) {
         const ang = Math.random() * Math.PI * 2;
-        const dist = (0.4 + Math.random() * 0.4) * scale;
-        const r = (0.55 + Math.random() * 0.35) * scale;
+        const dist = (0.35 + Math.random() * 0.35) * scale;
+        const r = (0.45 + Math.random() * 0.3) * scale;
         const blob = new THREE.Mesh(
           new THREE.IcosahedronGeometry(r, 1),
           Math.random() < 0.5 ? pick(leafDarkMats) : pick(leafLightMats)
@@ -104,8 +104,8 @@ export function buildTrees(heightAt, count = 90) {
     tree.position.set(x, y, z);
     tree.rotation.y = Math.random() * Math.PI * 2;
     group.add(tree);
-    // 圆形碰撞半径随粗树干给出
-    trees.push({ group: tree, hp: 3, alive: true, kind: 'tree', x, z, radius: 0.5 * scale });
+    // 圆形碰撞半径随细树干给出
+    trees.push({ group: tree, hp: 3, alive: true, kind: 'tree', x, z, radius: 0.32 * scale });
     placed++;
   }
 
