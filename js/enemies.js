@@ -110,6 +110,7 @@ export function createEnemies({
       radius: 0.45,
       attackCd: 0,
       flash: 0,
+      trapCd: 0,
       wanderAngle: Math.random() * Math.PI * 2,
       wanderTimer: 0,
     };
@@ -194,6 +195,32 @@ export function createEnemies({
     }
   }
 
+  // 击败敌人：移除模型并掉落资源
+  function killEnemy(e) {
+    e.alive = false;
+    group.remove(e.mesh);
+    inventory.add('wood', 1);
+    inventory.add('stone', 1);
+    onTip('击败了敌人：木材 +1，石头 +1');
+  }
+
+  // 尖刺陷阱：踏入范围按周期掉血
+  function checkTraps(e, dt) {
+    e.trapCd = Math.max(0, e.trapCd - dt);
+    for (const t of building.getTraps()) {
+      const [w, , d] = t.size;
+      if (Math.abs(e.x - t.x) <= w / 2 && Math.abs(e.z - t.z) <= d / 2) {
+        if (e.trapCd <= 0) {
+          e.trapCd = 0.5;
+          e.hp -= 1;
+          e.flash = FLASH_TIME;
+          if (e.hp <= 0) killEnemy(e);
+        }
+        return;
+      }
+    }
+  }
+
   function update(dt) {
     // 玩家已死亡：敌人停手
     if (survival.state.health <= 0) return;
@@ -260,6 +287,7 @@ export function createEnemies({
       e.z = THREE.MathUtils.clamp(e.z, -52, 52);
       resolveObstacles(e);
       e.mesh.position.set(e.x, heightAt(e.x, e.z), e.z);
+      checkTraps(e, dt);
     }
 
     // 波次补充：敌对阶段存活不足上限，按间隔补一只；白天不刷
@@ -291,13 +319,8 @@ export function createEnemies({
         const kd = Math.hypot(kx, kz) || 1;
         e.x += (kx / kd) * KNOCKBACK;
         e.z += (kz / kd) * KNOCKBACK;
-        if (e.hp <= 0) {
-          e.alive = false;
-          group.remove(e.mesh);
-          inventory.add('wood', 1);
-          inventory.add('stone', 1);
-          onTip('击败了敌人：木材 +1，石头 +1');
-        } else {
+        if (e.hp <= 0) killEnemy(e);
+        else {
           onTip(`敌人受击（-${dmg}），剩余 ${e.hp}`);
         }
         return true;
@@ -317,6 +340,7 @@ export function createEnemies({
       e.alive = true;
       e.attackCd = 0;
       e.flash = 0;
+      e.trapCd = 0;
       e.mats.body.color.setHex(BODY_COLOR);
       e.mats.head.color.setHex(HEAD_COLOR);
       if (!e.mesh.parent) group.add(e.mesh);
