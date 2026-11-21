@@ -7,6 +7,8 @@ const MAT = {
   stone: new THREE.MeshStandardMaterial({ color: 0x8d8d8d, flatShading: false, roughness: 0.9 }),
   food: new THREE.MeshStandardMaterial({ color: 0xe8b339, flatShading: false, roughness: 0.8 }),
   leaf: new THREE.MeshStandardMaterial({ color: 0x4c8a3a, flatShading: false, roughness: 1 }),
+  skin: new THREE.MeshStandardMaterial({ color: 0xc98d63, flatShading: false, roughness: 0.7 }),
+  sleeve: new THREE.MeshStandardMaterial({ color: 0x5a6472, flatShading: false, roughness: 0.95 }),
 };
 
 function mesh(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
@@ -108,11 +110,26 @@ function buildModel(type) {
   return g;
 }
 
+// 常驻第一人称手臂：拳头握住工具下端，小臂与袖口伸向画面底边；作为 holder 子节点随呼吸/步伐一起摆动。
+function buildArm() {
+  const g = new THREE.Group();
+  const fist = mesh(new THREE.SphereGeometry(0.05, 10, 8), MAT.skin, 0, -0.2, 0.01);
+  fist.scale.set(0.9, 1.1, 0.9);
+  const fore = mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.3, 8), MAT.skin, 0.015, -0.4, 0.03, 0, 0, 0.15);
+  const sleeve = mesh(new THREE.CylinderGeometry(0.062, 0.058, 0.08, 8), MAT.sleeve, 0.02, -0.52, 0.035, 0, 0, 0.15);
+  g.add(fist, fore, sleeve);
+  g.rotation.z = 0.12;
+  return g;
+}
+
 // 手持物：挂在相机右下，切换物品时替换模型，左键触发挥动动画。
 export function createHeld(camera) {
   const holder = new THREE.Group();
   holder.position.set(0.32, -0.28, -0.55);
   camera.add(holder);
+
+  const arm = buildArm();
+  holder.add(arm);
 
   let current = null;
   let swing = 0;
