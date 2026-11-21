@@ -33,6 +33,7 @@ export function createEnemies({
   rocks,
   building,
   inventory,
+  particles,
 }) {
   const group = new THREE.Group();
   scene.add(group);
@@ -208,6 +209,9 @@ export function createEnemies({
   function killEnemy(e) {
     e.alive = false;
     group.remove(e.mesh);
+    const p = e.mesh.position.clone();
+    p.y += 0.8;
+    particles.burst(p, { color: 0xb02a2a, count: 14, size: 0.05, speed: 2.0, gravity: 8, life: 0.6 });
     inventory.add('wood', 1);
     inventory.add('stone', 1);
     onTip('击败了敌人：木材 +1，石头 +1');
@@ -322,6 +326,9 @@ export function createEnemies({
       if (ray.ray.intersectsBox(box)) {
         e.hp -= dmg;
         e.flash = FLASH_TIME;
+        const p = e.mesh.position.clone();
+        p.y += 0.8;
+        particles.burst(p, { color: 0xb02a2a, count: 6, size: 0.04, speed: 1.6, gravity: 8, life: 0.45 });
         // 受击后退半步（沿敌人→玩家反方向）
         const kx = e.x - player.x;
         const kz = e.z - player.z;

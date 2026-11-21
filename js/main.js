@@ -14,6 +14,7 @@ import { createInventory } from './inventory.js';
 import { createGather } from './gather.js';
 import { createBuilding } from './building.js';
 import { createEnemies } from './enemies.js';
+import { createParticles } from './particles.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -95,6 +96,7 @@ hotbar.onChange = (item) => held.setItem(item);
 held.setItem(ITEMS[0]);
 
 // ---------- 背包 / 采集 ----------
+const particles = createParticles(scene);
 const inventory = createInventory();
 const gather = createGather({
   camera,
@@ -104,6 +106,7 @@ const gather = createGather({
   inventory,
   hotbar,
   onTip: showTip,
+  particles,
 });
 const building = createBuilding({ scene, heightAt, inventory, onTip: showTip });
 
@@ -183,6 +186,7 @@ const enemies = createEnemies({
   rocks,
   building,
   inventory,
+  particles,
 });
 
 // ---------- 死亡 / 重生 ----------
@@ -327,6 +331,7 @@ function animate() {
   building.updateFlames();
   berries.update(dt);
   enemies.update(dt);
+  particles.update(dt);
 
   // 死亡检测与重生计时
   if (survival.state.health <= 0 && !dead) {
