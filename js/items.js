@@ -4,6 +4,7 @@ export const ITEMS = [
   { id: 'axe', name: '斧', icon: '🪓', count: 1, model: 'axe' },
   { id: 'spear', name: '矛', icon: '🗡', count: 1, model: 'spear' },
   { id: 'corn', name: '玉米', icon: '🌽', count: 4, model: 'food' },
+  { id: 'berry', name: '浆果', icon: '🍓', count: 3, model: 'berry' },
   { id: 'shield', name: '盾', icon: '🛡', count: 16, model: 'shield' },
   { id: 'stoneSpear', name: '石矛', icon: '🔱', count: 6, model: 'spear' },
 ];
