@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// 可建造构件：cost 消耗资源，size [宽,高,厚]，hp 耐久；collide 是否挡路，trap 是否为伤敌陷阱
+// 可建造构件：cost 消耗资源，size [宽,高,厚]，hp 耐久；collide 是否挡路，trap 是否为伤敌陷阱，light 是否带光源
 const PARTS = {
   wall:   { name: '墙板',     cost: { wood: 2 },          size: [2, 2.2, 0.15], hp: 6, collide: true },
   door:   { name: '木门',     cost: { wood: 3 },          size: [1, 2, 0.12],  hp: 4, collide: false },
@@ -9,6 +9,10 @@ const PARTS = {
   floor:  { name: '地板',     cost: { wood: 2 },          size: [2, 0.15, 2],  hp: 4, collide: false },
   roof:   { name: '屋顶',     cost: { wood: 2 },          size: [2, 0.12, 2],  hp: 4, collide: false },
   spike:  { name: '尖刺陷阱', cost: { wood: 1, stone: 1 }, size: [1, 0.5, 1],  hp: 3, collide: false, trap: true },
+  stairs: { name: '楼梯',     cost: { wood: 2 },          size: [1.6, 1.2, 2],  hp: 4, collide: false },
+  window: { name: '窗户墙',   cost: { wood: 2 },          size: [2, 2.2, 0.15], hp: 6, collide: true },
+  chest:  { name: '储物箱',   cost: { wood: 2 },          size: [1, 0.9, 0.8],  hp: 4, collide: true },
+  campfire: { name: '火堆',   cost: { wood: 1, stone: 1 }, size: [1, 0.6, 1],  hp: 3, collide: false, light: true },
 };
 
 const PART_KEYS = Object.keys(PARTS);
@@ -19,6 +23,9 @@ const MAT_METAL = new THREE.MeshStandardMaterial({ color: 0x9aa2ad, flatShading:
 const MAT_FLOOR = new THREE.MeshStandardMaterial({ color: 0xa97c50, flatShading: true, roughness: 1 });
 const MAT_ROOF = new THREE.MeshStandardMaterial({ color: 0x6b5138, flatShading: true, roughness: 1 });
 const MAT_SPIKE = new THREE.MeshStandardMaterial({ color: 0x8d8d8d, flatShading: true, roughness: 0.8 });
+const MAT_CHEST = new THREE.MeshStandardMaterial({ color: 0x6e4a2c, flatShading: true, roughness: 1 });
+const MAT_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fc4d8, transparent: true, opacity: 0.45, roughness: 0.2, metalness: 0.1 });
+const MAT_FLAME = new THREE.MeshStandardMaterial({ color: 0xffa040, emissive: 0xff7a2a, emissiveIntensity: 1.4, roughness: 0.6 });
 
 const REACH = 3.5;
 
@@ -79,6 +86,69 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
             g.add(cone);
           }
         }
+        return g;
+      }
+      case 'stairs': {
+        const g = new THREE.Group();
+        const steps = 4;
+        const stepD = size[2] / steps;
+        const stepH = size[1] / steps;
+        for (let i = 0; i < steps; i++) {
+          const step = boxMesh(
+            size[0], stepH * (i + 1), stepD, material,
+            0, (stepH * (i + 1)) / 2,
+            -size[2] / 2 + stepD * (i + 0.5)
+          );
+          g.add(step);
+        }
+        return g;
+      }
+      case 'window': {
+        const g = new THREE.Group();
+        const w = size[0], h = size[1], d = size[2];
+        const sillH = 0.85;
+        const lintelH = 0.6;
+        const winW = 1.3;
+        const winH = h - sillH - lintelH;
+        const sideW = (w - winW) / 2;
+        g.add(boxMesh(w, sillH, d, material, 0, sillH / 2, 0));
+        g.add(boxMesh(w, lintelH, d, material, 0, h - lintelH / 2, 0));
+        g.add(boxMesh(sideW, winH, d, material, -winW / 2 - sideW / 2, sillH + winH / 2, 0));
+        g.add(boxMesh(sideW, winH, d, material, winW / 2 + sideW / 2, sillH + winH / 2, 0));
+        const glass = new THREE.Mesh(new THREE.BoxGeometry(winW, winH, 0.05), MAT_GLASS);
+        glass.position.set(0, sillH + winH / 2, 0);
+        g.add(glass);
+        return g;
+      }
+      case 'chest': {
+        const g = new THREE.Group();
+        const body = boxMesh(size[0], 0.7, size[2], MAT_CHEST, 0, 0.35, 0);
+        const lid = boxMesh(size[0] + 0.05, 0.2, size[2] + 0.05, MAT_CHEST, 0, 0.8, 0);
+        const latch = boxMesh(0.12, 0.16, 0.06, MAT_METAL, 0, 0.62, size[2] / 2 + 0.02);
+        g.add(body, lid, latch);
+        return g;
+      }
+      case 'campfire': {
+        const g = new THREE.Group();
+        const stones = 6;
+        for (let i = 0; i < stones; i++) {
+          const ang = (i / stones) * Math.PI * 2;
+          const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), MAT_SPIKE);
+          rock.position.set(Math.cos(ang) * 0.4, 0.08, Math.sin(ang) * 0.4);
+          g.add(rock);
+        }
+        const log1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6, 5), MAT_WOOD);
+        log1.rotation.z = Math.PI / 2;
+        log1.position.y = 0.15;
+        const log2 = log1.clone();
+        log2.rotation.x = Math.PI / 2;
+        g.add(log1, log2);
+        const flame1 = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.5, 6), MAT_FLAME);
+        flame1.position.y = 0.45;
+        const flame2 = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.35, 6), MAT_FLAME);
+        flame2.position.set(0.08, 0.4, 0.05);
+        g.add(flame1, flame2);
+        g.userData.flames = [flame1, flame2];
         return g;
       }
       default: {
@@ -159,6 +229,14 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     solid.rotation.y = p.rot;
     solid.castShadow = true;
     scene.add(solid);
+
+    if (PARTS[partKey].light) {
+      const light = new THREE.PointLight(0xff8a3a, 1.2, 9, 2);
+      light.position.set(p.x, p.y + 0.9, p.z);
+      scene.add(light);
+      solid.userData.light = light;
+    }
+
     placed.push({ mesh: solid, partKey, hp: PARTS[partKey].hp });
   }
 
@@ -169,7 +247,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
       const obj = placed[i];
       box.setFromObject(obj.mesh);
       if (ray.ray.intersectsBox(box)) {
-        scene.remove(obj.mesh);
+        detach(obj);
         // 拆除返还一半资源（向下取整）
         for (const [k, v] of Object.entries(PARTS[obj.partKey].cost)) {
           const refund = Math.floor(v / 2);
@@ -180,6 +258,12 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
         return;
       }
     }
+  }
+
+  // 移除构件及其挂接的光源
+  function detach(obj) {
+    scene.remove(obj.mesh);
+    if (obj.mesh.userData.light) scene.remove(obj.mesh.userData.light);
   }
 
   function toggle() {
@@ -225,7 +309,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
       if (Math.hypot(dx, dz) > range) continue;
       p.hp -= dmg;
       if (p.hp <= 0) {
-        scene.remove(p.mesh);
+        detach(p);
         placed.splice(i, 1);
         onTip(`${PARTS[p.partKey].name}被敌人撞塌了！`);
       }
@@ -234,12 +318,28 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     return false;
   }
 
+  // 火焰闪烁：光源强度与火苗缩放随时间抖动
+  function updateFlames() {
+    const now = performance.now() * 0.001;
+    for (const p of placed) {
+      if (!PARTS[p.partKey].light) continue;
+      const flick = 1 + Math.sin(now * 7 + p.mesh.position.x * 3) * 0.15;
+      if (p.mesh.userData.light) p.mesh.userData.light.intensity = 1.2 * flick;
+      const flames = p.mesh.userData.flames || [];
+      flames.forEach((f, i) => {
+        const s = 1 + Math.sin(now * 9 + i * 2 + p.mesh.position.z * 3) * 0.12;
+        f.scale.set(s, 1 + (s - 1) * 1.5, s);
+      });
+    }
+  }
+
   return {
     toggle,
     cycle,
     place,
     removeAt,
     update,
+    updateFlames,
     getColliders,
     getTraps,
     damageNearby,

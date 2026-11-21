@@ -300,6 +300,7 @@ function animate() {
   survival.update(dt);
   held.update(dt);
   building.update(player);
+  building.updateFlames();
   berries.update(dt);
   enemies.update(dt);
 
