@@ -14,7 +14,7 @@ import { createBuilding } from './building.js';
 // ---------- 场景 ----------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fc8e8);
-scene.fog = new THREE.Fog(0x9fc8e8, 40, 110);
+scene.fog = new THREE.Fog(0x9fc8e8, 45, 130);
 
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 300);
 const EYE_HEIGHT = 1.7;
@@ -24,17 +24,20 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 scene.add(camera); // 相机加入场景图，手持物才能作为子节点渲染
 
 // ---------- 光照 ----------
-const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x4a6b3a, 0.9);
+const hemi = new THREE.HemisphereLight(0xbcd8ff, 0x5a6b45, 0.9);
 scene.add(hemi);
 
 const sun = new THREE.DirectionalLight(0xfff2d8, 1.6);
 sun.position.set(30, 45, 20);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -60;
 sun.shadow.camera.right = 60;
 sun.shadow.camera.top = 60;
@@ -49,7 +52,7 @@ const trees = buildTrees(heightAt, 90);
 const rocks = buildRocks(heightAt, 40);
 scene.add(trees.group);
 scene.add(rocks.group);
-scene.add(buildGrass(heightAt, 350));
+scene.add(buildGrass(heightAt, 450));
 
 // ---------- 昼夜循环 / 生存数值 ----------
 const dayNight = createDayNight({ scene, sun, hemi });

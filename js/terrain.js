@@ -22,9 +22,9 @@ export function buildTerrain() {
 
   const pos = geo.attributes.position;
   const colors = [];
-  const colorLow = new THREE.Color(0x3f7d3a);
-  const colorHigh = new THREE.Color(0x6fa84e);
-  const colorDry = new THREE.Color(0x8aa64f);
+  const colorLow = new THREE.Color(0x3a7335);
+  const colorHigh = new THREE.Color(0x74a854);
+  const colorDry = new THREE.Color(0x93a65a);
   const c = new THREE.Color();
 
   for (let i = 0; i < pos.count; i++) {

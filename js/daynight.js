@@ -7,15 +7,41 @@ const SKY_DUSK = new THREE.Color(0xe89a6a);
 const SKY_NIGHT = new THREE.Color(0x0b1026);
 const SUN_DAY = new THREE.Color(0xfff2d8);
 const SUN_DUSK = new THREE.Color(0xff8a4a);
+const NIGHT_TINT = new THREE.Color(0x232c4d);
 
-// 昼夜循环：驱动太阳角度、光照强度/颜色、天空与雾色、星星显隐
+// 昼夜循环：驱动太阳角度、光照强度/颜色、天空穹顶与雾色、星星显隐
 export function createDayNight({ scene, sun, hemi }) {
   let t = 0.15; // 0=日出 0.25=正午 0.5=日落 0.75=午夜
 
   const stars = buildStars();
   scene.add(stars);
 
+  const skyDome = buildSkyDome();
+  scene.add(skyDome);
+  const skyMat = skyDome.material;
+
   const skyColor = new THREE.Color();
+
+  function buildSkyDome() {
+    const geo = new THREE.SphereGeometry(220, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const pos = geo.attributes.position;
+    const colors = [];
+    const top = new THREE.Color(0x5f9fd8);
+    const horizon = new THREE.Color(0xd6e8f3);
+    const c = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      const y = THREE.MathUtils.clamp(pos.getY(i) / 220, 0, 1);
+      c.lerpColors(horizon, top, y);
+      colors.push(c.r, c.g, c.b);
+    }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    const mat = new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      side: THREE.BackSide,
+      fog: false,
+    });
+    return new THREE.Mesh(geo, mat);
+  }
 
   function buildStars() {
     const count = 400;
@@ -61,15 +87,19 @@ export function createDayNight({ scene, sun, hemi }) {
     const dayFactor = THREE.MathUtils.smoothstep(elevation, -0.08, 0.25);
     const duskFactor = Math.max(0, 1 - Math.abs(elevation) / 0.22);
 
-    sun.intensity = Math.max(0, elevation) * 1.8;
+    sun.intensity = Math.max(0, elevation) * 2.0;
     sun.color.copy(SUN_DAY).lerp(SUN_DUSK, duskFactor);
 
-    hemi.intensity = 0.25 + dayFactor * 0.65;
+    hemi.intensity = 0.28 + dayFactor * 0.72;
 
     skyColor.copy(SKY_NIGHT).lerp(SKY_DAY, dayFactor);
     skyColor.lerp(SKY_DUSK, duskFactor * 0.6);
     scene.background = skyColor;
     scene.fog.color.copy(skyColor);
+
+    // 穹顶随昼夜压暗 / 偏蓝，黄昏叠一点暖调
+    skyMat.color.set(0xffffff).lerp(NIGHT_TINT, 1 - dayFactor);
+    skyMat.color.lerp(SKY_DUSK, duskFactor * 0.35);
 
     stars.material.opacity = (1 - dayFactor) * 0.9;
   }
