@@ -3,6 +3,9 @@ import { buildTerrain } from './terrain.js';
 import { buildTrees, buildGrass } from './trees.js';
 import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
+import { ITEMS } from './items.js';
+import { createHotbar } from './hotbar.js';
+import { createHeld } from './held.js';
 
 // ---------- 场景 ----------
 const scene = new THREE.Scene();
@@ -18,6 +21,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
+scene.add(camera); // 相机加入场景图，手持物才能作为子节点渲染
 
 // ---------- 光照 ----------
 const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x4a6b3a, 0.9);
@@ -43,6 +47,12 @@ scene.add(buildGrass(heightAt, 350));
 // ---------- 昼夜循环 / 生存数值 ----------
 const dayNight = createDayNight({ scene, sun, hemi });
 const survival = createSurvival();
+
+// ---------- 快捷栏 / 手持物 ----------
+const hotbar = createHotbar(ITEMS);
+const held = createHeld(camera);
+hotbar.onChange = (item) => held.setItem(item);
+held.setItem(ITEMS[0]);
 
 // ---------- HUD ----------
 const el = {
@@ -82,12 +92,19 @@ const keys = {};
 addEventListener('keydown', (e) => {
   keys[e.code] = true;
   if (e.code === 'Space') e.preventDefault();
+  if (e.code.startsWith('Digit')) {
+    const n = Number(e.code.slice(5));
+    if (n >= 1 && n <= ITEMS.length) hotbar.select(n - 1);
+  }
 });
 addEventListener('keyup', (e) => (keys[e.code] = false));
 
 const canvas = renderer.domElement;
 let locked = false;
 canvas.addEventListener('click', () => canvas.requestPointerLock());
+canvas.addEventListener('mousedown', (e) => {
+  if (locked && e.button === 0) held.triggerSwing();
+});
 document.addEventListener('pointerlockchange', () => {
   locked = document.pointerLockElement === canvas;
 });
@@ -108,6 +125,7 @@ function animate() {
 
   dayNight.update(dt);
   survival.update(dt);
+  held.update(dt);
 
   const speed = keys['ShiftLeft'] || keys['ShiftRight'] ? 9 : 5;
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
