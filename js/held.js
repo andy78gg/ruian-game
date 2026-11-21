@@ -116,6 +116,9 @@ export function createHeld(camera) {
 
   let current = null;
   let swing = 0;
+  let idleTime = 0;      // 待机呼吸累积时间
+  let walkPhase = 0;     // 步伐相位
+  let moveBlend = 0;     // 静止↔移动平滑过渡 0..1
 
   function setItem(item) {
     if (current) holder.remove(current);
@@ -127,16 +130,41 @@ export function createHeld(camera) {
     swing = 1;
   }
 
-  function update(dt) {
+  // moving：是否按移动键；running：是否奔跑。待机做呼吸浮动，移动叠加步伐左右/上下摆动。
+  function update(dt, moving = false, running = false) {
+    idleTime += dt;
+
+    const blendTarget = moving ? 1 : 0;
+    moveBlend += (blendTarget - moveBlend) * Math.min(1, dt * 8);
+
+    // 挥动动画优先级最高，直接覆盖位置与姿态
     if (swing > 0) {
       swing = Math.max(0, swing - dt * 3.2);
-      const t = 1 - swing;
-      holder.rotation.x = -Math.sin(t * Math.PI) * 0.7;
-      holder.position.y = -0.28 - Math.sin(t * Math.PI) * 0.05;
-    } else {
-      holder.rotation.x = 0;
-      holder.position.y = -0.28;
+      const k = 1 - swing;
+      holder.rotation.x = -Math.sin(k * Math.PI) * 0.7;
+      holder.rotation.z = 0;
+      holder.position.x = 0.32;
+      holder.position.y = -0.28 - Math.sin(k * Math.PI) * 0.05;
+      return;
     }
+
+    // 步频：奔跑比走路更快
+    walkPhase += dt * (running ? 11 : 7);
+
+    // 待机呼吸：轻微上下浮动 + 极小幅倾斜
+    const breathY = Math.sin(idleTime * 1.6) * 0.008;
+    const breathRz = Math.sin(idleTime * 0.8) * 0.012;
+
+    // 步伐摆动：左右平移、落地上下起伏、横滚与俯仰随步频
+    const walkX = Math.sin(walkPhase) * 0.028;
+    const walkY = Math.abs(Math.sin(walkPhase)) * 0.022;
+    const walkRz = Math.sin(walkPhase) * 0.04;
+    const walkRx = -Math.cos(walkPhase) * 0.03;
+
+    holder.position.x = 0.32 + walkX * moveBlend;
+    holder.position.y = -0.28 + breathY - walkY * moveBlend;
+    holder.rotation.x = walkRx * moveBlend;
+    holder.rotation.z = breathRz + walkRz * moveBlend;
   }
 
   return { setItem, triggerSwing, update };

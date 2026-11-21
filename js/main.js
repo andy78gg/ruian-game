@@ -318,10 +318,11 @@ const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
+  let moving = false;
+  let running = false;
 
   dayNight.update(dt);
   survival.update(dt);
-  held.update(dt);
   building.update(player);
   building.updateFlames();
   berries.update(dt);
@@ -340,7 +341,8 @@ function animate() {
   }
 
   if (!dead) {
-  const speed = keys['ShiftLeft'] || keys['ShiftRight'] ? 9 : 5;
+  running = keys['ShiftLeft'] || keys['ShiftRight'];
+  const speed = running ? 9 : 5;
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new THREE.Vector3(-forward.z, 0, forward.x);
   const move = new THREE.Vector3();
@@ -350,7 +352,9 @@ function animate() {
   if (keys['KeyD']) move.add(right);
   if (keys['KeyA']) move.sub(right);
 
-  if (move.lengthSq() > 0) {
+  moving = move.lengthSq() > 0;
+
+  if (moving) {
     move.normalize().multiplyScalar(speed * dt);
     player.x += move.x;
     player.z += move.z;
@@ -375,6 +379,8 @@ function animate() {
     player.onGround = true;
   }
   }
+
+  held.update(dt, moving, running);
 
   camera.position.set(player.x, player.y + EYE_HEIGHT, player.z);
   camera.rotation.order = 'YXZ';
