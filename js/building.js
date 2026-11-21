@@ -1,9 +1,14 @@
 import * as THREE from 'three';
 
-// 可建造构件：cost 为消耗资源，size 为 [宽, 高, 厚]，hp 为被敌人攻击的耐久
+// 可建造构件：cost 消耗资源，size [宽,高,厚]，hp 耐久；collide 是否挡路，trap 是否为伤敌陷阱
 const PARTS = {
-  wall: { name: '墙板', cost: { wood: 2 }, size: [2, 2.2, 0.15], hp: 6 },
-  door: { name: '木门', cost: { wood: 3 }, size: [1, 2, 0.12], hp: 4 },
+  wall:   { name: '墙板',     cost: { wood: 2 },          size: [2, 2.2, 0.15], hp: 6, collide: true },
+  door:   { name: '木门',     cost: { wood: 3 },          size: [1, 2, 0.12],  hp: 4, collide: false },
+  fence:  { name: '栅栏',     cost: { wood: 1 },          size: [2, 1.1, 0.1], hp: 4, collide: true },
+  pillar: { name: '柱子',     cost: { wood: 1 },          size: [0.4, 2.6, 0.4], hp: 5, collide: true },
+  floor:  { name: '地板',     cost: { wood: 2 },          size: [2, 0.15, 2],  hp: 4, collide: false },
+  roof:   { name: '屋顶',     cost: { wood: 2 },          size: [2, 0.12, 2],  hp: 4, collide: false },
+  spike:  { name: '尖刺陷阱', cost: { wood: 1, stone: 1 }, size: [1, 0.5, 1],  hp: 3, collide: false, trap: true },
 };
 
 const PART_KEYS = Object.keys(PARTS);
@@ -11,6 +16,9 @@ const PART_KEYS = Object.keys(PARTS);
 const MAT_WOOD = new THREE.MeshStandardMaterial({ color: 0x9c6b3f, flatShading: true, roughness: 1 });
 const MAT_DOOR = new THREE.MeshStandardMaterial({ color: 0x7a4f2a, flatShading: true, roughness: 1 });
 const MAT_METAL = new THREE.MeshStandardMaterial({ color: 0x9aa2ad, flatShading: true, roughness: 0.6 });
+const MAT_FLOOR = new THREE.MeshStandardMaterial({ color: 0xa97c50, flatShading: true, roughness: 1 });
+const MAT_ROOF = new THREE.MeshStandardMaterial({ color: 0x6b5138, flatShading: true, roughness: 1 });
+const MAT_SPIKE = new THREE.MeshStandardMaterial({ color: 0x8d8d8d, flatShading: true, roughness: 0.8 });
 
 const REACH = 3.5;
 
@@ -32,17 +40,51 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     return PART_KEYS[partIndex];
   }
 
+  function boxMesh(w, h, d, mat, x, y, z) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    return m;
+  }
+
   function buildPartMesh(partKey, material) {
     const size = PARTS[partKey].size;
-    if (partKey === 'door') {
-      const g = new THREE.Group();
-      const panel = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
-      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.05), MAT_METAL);
-      handle.position.set(0.3, 0, size[2] / 2 + 0.02);
-      g.add(panel, handle);
-      return g;
+
+    switch (partKey) {
+      case 'door': {
+        const g = new THREE.Group();
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
+        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.05), MAT_METAL);
+        handle.position.set(0.3, 0, size[2] / 2 + 0.02);
+        g.add(panel, handle);
+        return g;
+      }
+      case 'fence': {
+        const g = new THREE.Group();
+        const postL = boxMesh(0.08, size[1], 0.08, material, -size[0] / 2 + 0.04, size[1] / 2, 0);
+        const postR = boxMesh(0.08, size[1], 0.08, material, size[0] / 2 - 0.04, size[1] / 2, 0);
+        const rail1 = boxMesh(size[0], 0.12, 0.05, material, 0, size[1] * 0.4, 0);
+        const rail2 = boxMesh(size[0], 0.12, 0.05, material, 0, size[1] * 0.78, 0);
+        g.add(postL, postR, rail1, rail2);
+        return g;
+      }
+      case 'spike': {
+        const g = new THREE.Group();
+        const base = boxMesh(size[0], 0.08, size[2], material, 0, 0.04, 0);
+        g.add(base);
+        const off = size[0] / 4;
+        for (const ox of [-off, off]) {
+          for (const oz of [-off, off]) {
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 5), MAT_SPIKE);
+            cone.position.set(ox, 0.08 + 0.2, oz);
+            g.add(cone);
+          }
+        }
+        return g;
+      }
+      default: {
+        return new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
+      }
     }
-    return new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
   }
 
   function refreshPreview() {
@@ -107,7 +149,12 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
 
     for (const [k, v] of Object.entries(part.cost)) inventory.add(k, -v);
 
-    const solid = buildPartMesh(partKey, partKey === 'door' ? MAT_DOOR : MAT_WOOD);
+    const solidMat =
+      partKey === 'door' ? MAT_DOOR :
+      partKey === 'floor' ? MAT_FLOOR :
+      partKey === 'roof' ? MAT_ROOF :
+      MAT_WOOD;
+    const solid = buildPartMesh(partKey, solidMat);
     solid.position.set(p.x, p.y + part.size[1] / 2, p.z);
     solid.rotation.y = p.rot;
     solid.castShadow = true;
@@ -146,14 +193,25 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     refreshPreview();
   }
 
-  // 供移动碰撞使用：已放置墙板的轴对齐盒体（门位留空可通行）
+  // 供移动碰撞使用：可挡路构件的轴对齐盒体（门/地板/屋顶/陷阱留空可通行）
   function getColliders() {
     return placed
-      .filter((p) => p.partKey !== 'door')
+      .filter((p) => PARTS[p.partKey].collide)
       .map((p) => ({
         x: p.mesh.position.x,
         z: p.mesh.position.z,
         rot: p.mesh.rotation.y,
+        size: PARTS[p.partKey].size,
+      }));
+  }
+
+  // 尖刺陷阱位置（供敌人踩踏判定）
+  function getTraps() {
+    return placed
+      .filter((p) => PARTS[p.partKey].trap)
+      .map((p) => ({
+        x: p.mesh.position.x,
+        z: p.mesh.position.z,
         size: PARTS[p.partKey].size,
       }));
   }
@@ -183,6 +241,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     removeAt,
     update,
     getColliders,
+    getTraps,
     damageNearby,
     get buildMode() {
       return buildMode;
