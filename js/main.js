@@ -89,6 +89,8 @@ scene.add(buildMountains(heightAt));
 // ---------- 昼夜循环 / 生存数值 ----------
 const dayNight = createDayNight({ scene, sun, hemi });
 const survival = createSurvival();
+let hurtTimer = 0;
+survival.setOnHurt(() => { hurtTimer = 0.35; });
 
 // ---------- 快捷栏 / 手持物 ----------
 const hotbar = createHotbar(ITEMS);
@@ -116,6 +118,7 @@ const el = {
   phase: document.getElementById('phase'),
   health: document.getElementById('health-bar'),
   food: document.getElementById('food-bar'),
+  hurt: document.getElementById('hurt-overlay'),
 };
 
 let tipTimer = null;
@@ -330,6 +333,8 @@ function animate() {
 
   dayNight.update(dt);
   survival.update(dt);
+  hurtTimer = Math.max(0, hurtTimer - dt);
+  el.hurt.style.opacity = hurtTimer > 0 ? (hurtTimer / 0.35) * 0.55 : 0;
   building.update(player);
   building.updateFlames();
   berries.update(dt);

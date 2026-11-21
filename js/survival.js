@@ -3,6 +3,7 @@ export function createSurvival() {
   const state = { health: 100, food: 100 };
   let foodTimer = 0;
   let starveTimer = 0;
+  let onHurt = null;
 
   function update(dt) {
     foodTimer += dt;
@@ -29,6 +30,11 @@ export function createSurvival() {
 
   function damage(n) {
     state.health = Math.max(0, state.health - n);
+    if (onHurt) onHurt(n);
+  }
+
+  function setOnHurt(cb) {
+    onHurt = cb;
   }
 
   function respawn() {
@@ -38,5 +44,5 @@ export function createSurvival() {
     starveTimer = 0;
   }
 
-  return { state, update, eat, damage, respawn };
+  return { state, update, eat, damage, respawn, setOnHurt };
 }

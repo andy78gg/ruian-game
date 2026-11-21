@@ -139,6 +139,16 @@ canvas { display: block; }
 
 #build-hint.show { opacity: 1; }
 
+/* 受击泛红遮罩：四周径向渐变红，由 JS 控制透明度淡出 */
+#hurt-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(180, 20, 20, 0) 55%, rgba(180, 20, 20, 0.55) 100%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
 /* 死亡遮罩 */
 #death-screen {
   position: fixed;
