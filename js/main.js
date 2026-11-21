@@ -4,6 +4,7 @@ import { buildTrees, buildGrass } from './trees.js';
 import { buildRocks } from './rocks.js';
 import { buildBerries } from './berries.js';
 import { buildScatter } from './scatter.js';
+import { buildMountains } from './mountains.js';
 import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
@@ -13,6 +14,10 @@ import { createInventory } from './inventory.js';
 import { createGather } from './gather.js';
 import { createBuilding } from './building.js';
 import { createEnemies } from './enemies.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 // ---------- 场景 ----------
 const scene = new THREE.Scene();
@@ -32,6 +37,18 @@ renderer.toneMappingExposure = 1.15;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 scene.add(camera); // 相机加入场景图，手持物才能作为子节点渲染
+
+// ---------- 后处理：Bloom 辉光（仅高亮自发光体，如火苗/红眼） ----------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(innerWidth, innerHeight),
+  0.55, // strength 辉光强度
+  0.4,  // radius 扩散半径
+  0.85  // threshold 亮度阈值，低于此值不泛光
+);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
 
 // ---------- 光照 ----------
 const hemi = new THREE.HemisphereLight(0xbcd8ff, 0x5a6b45, 0.85);
@@ -65,6 +82,7 @@ scene.add(rocks.group);
 scene.add(berries.group);
 scene.add(buildGrass(heightAt, 900));
 scene.add(buildScatter(heightAt));
+scene.add(buildMountains(heightAt));
 
 // ---------- 昼夜循环 / 生存数值 ----------
 const dayNight = createDayNight({ scene, sun, hemi });
@@ -364,7 +382,7 @@ function animate() {
   camera.rotation.x = player.pitch;
 
   updateHUD();
-  renderer.render(scene, camera);
+  composer.render();
 }
 animate();
 
@@ -372,4 +390,5 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
 });
