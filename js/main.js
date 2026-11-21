@@ -65,11 +65,24 @@ function updateHUD() {
 }
 
 // ---------- 玩家（第一人称） ----------
-const player = { x: 0, z: 0, yaw: 0, pitch: 0 };
-camera.position.set(0, heightAt(0, 0) + EYE_HEIGHT, 0);
+const GRAVITY = 20;
+const JUMP_SPEED = 7.5;
+const player = {
+  x: 0,
+  z: 0,
+  y: heightAt(0, 0),
+  yaw: 0,
+  pitch: 0,
+  vy: 0,
+  onGround: true,
+};
+camera.position.set(0, player.y + EYE_HEIGHT, 0);
 
 const keys = {};
-addEventListener('keydown', (e) => (keys[e.code] = true));
+addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.code === 'Space') e.preventDefault();
+});
 addEventListener('keyup', (e) => (keys[e.code] = false));
 
 const canvas = renderer.domElement;
@@ -114,8 +127,22 @@ function animate() {
     player.z = THREE.MathUtils.clamp(player.z, -55, 55);
   }
 
+  // 跳跃与重力
+  if (keys['Space'] && player.onGround) {
+    player.vy = JUMP_SPEED;
+    player.onGround = false;
+  }
+  player.vy -= GRAVITY * dt;
+  player.y += player.vy * dt;
+
   const groundY = heightAt(player.x, player.z);
-  camera.position.set(player.x, groundY + EYE_HEIGHT, player.z);
+  if (player.y <= groundY) {
+    player.y = groundY;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  camera.position.set(player.x, player.y + EYE_HEIGHT, player.z);
   camera.rotation.order = 'YXZ';
   camera.rotation.y = player.yaw;
   camera.rotation.x = player.pitch;
