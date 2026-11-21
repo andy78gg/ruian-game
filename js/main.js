@@ -81,7 +81,8 @@ const berries = buildBerries(heightAt, 24);
 scene.add(trees.group);
 scene.add(rocks.group);
 scene.add(berries.group);
-scene.add(buildGrass(heightAt, 900));
+const grass = buildGrass(heightAt, 900);
+scene.add(grass.group);
 scene.add(buildScatter(heightAt));
 scene.add(buildMountains(heightAt));
 
@@ -318,10 +319,12 @@ addEventListener('mousemove', (e) => {
 
 // ---------- 主循环 ----------
 const clock = new THREE.Clock();
+let elapsed = 0;
 
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
   let moving = false;
   let running = false;
 
@@ -332,6 +335,7 @@ function animate() {
   berries.update(dt);
   enemies.update(dt);
   particles.update(dt);
+  grass.update(elapsed);
 
   // 死亡检测与重生计时
   if (survival.state.health <= 0 && !dead) {

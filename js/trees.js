@@ -117,7 +117,7 @@ export function buildTrees(heightAt, count = 90) {
   return { group, trees };
 }
 
-// 交叉双片草丛（InstancedMesh），比单片更饱满自然；每株带轻微色差
+// 交叉双片草丛（InstancedMesh），比单片更饱满自然；每株带轻微色差，并随风轻摆
 export function buildGrass(heightAt, count = 900) {
   const geo = new THREE.PlaneGeometry(0.22, 0.6);
   geo.translate(0, 0.3, 0);
@@ -135,6 +135,7 @@ export function buildGrass(heightAt, count = 900) {
   const dummy = new THREE.Object3D();
   const base = new THREE.Color(0x557a3c);
   const tint = new THREE.Color();
+  const blades = [];
 
   let i = 0;
   let attempts = 0;
@@ -147,6 +148,7 @@ export function buildGrass(heightAt, count = 900) {
     const y = heightAt(x, z);
     const rot = Math.random() * Math.PI;
     const s = 0.7 + Math.random() * 0.8;
+    const phase = Math.random() * Math.PI * 2;
 
     dummy.position.set(x, y, z);
     dummy.rotation.set(0, rot, 0);
@@ -164,6 +166,7 @@ export function buildGrass(heightAt, count = 900) {
     meshA.setColorAt(i, tint);
     meshB.setColorAt(i, tint);
 
+    blades.push({ x, y, z, rot, s, phase });
     i++;
   }
   meshA.count = i;
@@ -171,7 +174,26 @@ export function buildGrass(heightAt, count = 900) {
   meshA.instanceColor.needsUpdate = true;
   meshB.instanceColor.needsUpdate = true;
 
+  // 随风轻摆：每株相位错开，绕根部小幅倾斜，time 为累计秒数
+  function update(time) {
+    for (let b = 0; b < blades.length; b++) {
+      const bl = blades[b];
+      const sway = Math.sin(time * 1.8 + bl.phase) * 0.12;
+      dummy.position.set(bl.x, bl.y, bl.z);
+      dummy.rotation.set(sway, bl.rot, sway * 0.5);
+      dummy.scale.set(bl.s, bl.s, bl.s);
+      dummy.updateMatrix();
+      meshA.setMatrixAt(b, dummy.matrix);
+
+      dummy.rotation.set(sway, bl.rot + Math.PI / 2, sway * 0.5);
+      dummy.updateMatrix();
+      meshB.setMatrixAt(b, dummy.matrix);
+    }
+    meshA.instanceMatrix.needsUpdate = true;
+    meshB.instanceMatrix.needsUpdate = true;
+  }
+
   const group = new THREE.Group();
   group.add(meshA, meshB);
-  return group;
+  return { group, update };
 }
