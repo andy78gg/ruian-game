@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { buildTerrain } from './terrain.js';
 import { buildTrees, buildGrass } from './trees.js';
 import { buildRocks } from './rocks.js';
+import { buildBerries } from './berries.js';
 import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
@@ -54,8 +55,10 @@ const { mesh: terrain, heightAt } = buildTerrain();
 scene.add(terrain);
 const trees = buildTrees(heightAt, 90);
 const rocks = buildRocks(heightAt, 40);
+const berries = buildBerries(heightAt, 24);
 scene.add(trees.group);
 scene.add(rocks.group);
+scene.add(berries.group);
 scene.add(buildGrass(heightAt, 600));
 
 // ---------- 昼夜循环 / 生存数值 ----------
@@ -74,6 +77,7 @@ const gather = createGather({
   camera,
   trees: trees.trees,
   rocks: rocks.rocks,
+  berries,
   inventory,
   hotbar,
   onTip: showTip,
@@ -98,7 +102,7 @@ function showTip(text) {
 
 function tryEat() {
   const item = hotbar.state.items[hotbar.state.selected];
-  if (item.model !== 'food') return;
+  if (item.model !== 'food' && item.model !== 'berry') return;
   if (item.count <= 0) {
     showTip('没有食物了');
     return;
@@ -267,7 +271,7 @@ canvas.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
     held.triggerSwing();
     if (building.buildMode) building.place(player);
-    else if (!enemies.tryHit(camera)) gather.tryHit();
+    else if (!enemies.tryHit(camera, hotbar.state.items[hotbar.state.selected])) gather.tryHit();
   } else if (e.button === 2) {
     if (building.buildMode) building.removeAt(camera);
     else tryEat();
@@ -296,6 +300,7 @@ function animate() {
   survival.update(dt);
   held.update(dt);
   building.update(player);
+  berries.update(dt);
   enemies.update(dt);
 
   // 死亡检测与重生计时
