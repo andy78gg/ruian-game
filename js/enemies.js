@@ -60,11 +60,13 @@ export function createEnemies({
     const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 1.0, 6), bodyMat);
     body.position.y = 0.5;
     body.castShadow = true;
+    body.receiveShadow = true;
     g.add(body);
 
     const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), headMat);
     head.position.y = 1.18;
     head.castShadow = true;
+    head.receiveShadow = true;
     g.add(head);
 
     // 发红的双眼，夜间也能看清
@@ -79,6 +81,8 @@ export function createEnemies({
       const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.7, 5), bodyMat);
       arm.position.set(0.42 * side, 0.65, 0);
       arm.rotation.z = -0.2 * side;
+      arm.castShadow = true;
+      arm.receiveShadow = true;
       g.add(arm);
     }
     return { group: g, bodyMat, headMat };
