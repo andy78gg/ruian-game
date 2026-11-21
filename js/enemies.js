@@ -12,6 +12,10 @@ const ENEMY_HP = 5;
 const CHASE_SPEED = 2.8;
 const WANDER_SPEED = 0.7;
 const REACH = 3.2;
+const KNOCKBACK = 0.6;       // 受击后退距离
+const FLASH_TIME = 0.15;     // 受击闪红时长
+// 武器伤害区分：斧 / 长矛 / 石矛 两下破甲，其余一下
+const DAMAGE_BY_TOOL = { axe: 2, spear: 2, stoneSpear: 2, pickaxe: 1 };
 
 // 敌人 AI：黄昏/夜晚追击玩家并近身攻击，白天缓慢游荡；左键可击打，击败掉落资源。
 export function createEnemies({
@@ -72,7 +76,7 @@ export function createEnemies({
       arm.rotation.z = -0.2 * side;
       g.add(arm);
     }
-    return g;
+    return { group: g, bodyMat, headMat };
   }
 
   function spawnPosition() {
@@ -87,18 +91,20 @@ export function createEnemies({
   }
 
   function spawnEnemy() {
-    const mesh = buildMesh();
+    const { group: mesh, bodyMat, headMat } = buildMesh();
     const p = spawnPosition();
     mesh.position.set(p.x, heightAt(p.x, p.z), p.z);
     group.add(mesh);
     return {
       mesh,
+      mats: { body: bodyMat, head: headMat },
       x: p.x,
       z: p.z,
       hp: ENEMY_HP,
       alive: true,
       radius: 0.45,
       attackCd: 0,
+      flash: 0,
       wanderAngle: Math.random() * Math.PI * 2,
       wanderTimer: 0,
     };
@@ -172,6 +178,15 @@ export function createEnemies({
 
     for (const e of enemies) {
       if (!e.alive) continue;
+
+      // 受击闪红倒计时，结束后恢复原色
+      if (e.flash > 0) {
+        e.flash -= dt;
+        const on = e.flash > 0;
+        e.mats.body.color.setHex(on ? 0x8a2a2a : BODY_COLOR);
+        e.mats.head.color.setHex(on ? 0x9a3a3a : HEAD_COLOR);
+      }
+
       const dx = player.x - e.x;
       const dz = player.z - e.z;
       const dist = Math.hypot(dx, dz);
@@ -212,14 +227,22 @@ export function createEnemies({
     }
   }
 
-  function tryHit(camera) {
+  function tryHit(camera, item) {
     ray.setFromCamera(center, camera);
     ray.far = REACH;
+    const dmg = DAMAGE_BY_TOOL[item?.id] ?? 1;
     for (const e of enemies) {
       if (!e.alive) continue;
       box.setFromObject(e.mesh);
       if (ray.ray.intersectsBox(box)) {
-        e.hp -= 1;
+        e.hp -= dmg;
+        e.flash = FLASH_TIME;
+        // 受击后退半步（沿敌人→玩家反方向）
+        const kx = e.x - player.x;
+        const kz = e.z - player.z;
+        const kd = Math.hypot(kx, kz) || 1;
+        e.x += (kx / kd) * KNOCKBACK;
+        e.z += (kz / kd) * KNOCKBACK;
         if (e.hp <= 0) {
           e.alive = false;
           group.remove(e.mesh);
@@ -227,7 +250,7 @@ export function createEnemies({
           inventory.add('stone', 1);
           onTip('击败了敌人：木材 +1，石头 +1');
         } else {
-          onTip(`敌人受击，剩余 ${e.hp}`);
+          onTip(`敌人受击（-${dmg}），剩余 ${e.hp}`);
         }
         return true;
       }
@@ -244,6 +267,9 @@ export function createEnemies({
       e.hp = ENEMY_HP;
       e.alive = true;
       e.attackCd = 0;
+      e.flash = 0;
+      e.mats.body.color.setHex(BODY_COLOR);
+      e.mats.head.color.setHex(HEAD_COLOR);
       if (!e.mesh.parent) group.add(e.mesh);
       e.mesh.position.set(e.x, heightAt(e.x, e.z), e.z);
     }
