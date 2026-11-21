@@ -16,10 +16,10 @@ export function buildTrees(heightAt, count = 90) {
     flatShading: false,
   });
   const leafDarkMats = LEAF_DARK.map(
-    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, flatShading: false })
+    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, flatShading: false, emissive: c, emissiveIntensity: 0.06 })
   );
   const leafLightMats = LEAF_LIGHT.map(
-    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, flatShading: false })
+    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, flatShading: false, emissive: c, emissiveIntensity: 0.08 })
   );
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -46,6 +46,7 @@ export function buildTrees(heightAt, count = 90) {
     );
     lower.position.y = (trunkH * 0.55) / 2;
     lower.castShadow = true;
+    lower.receiveShadow = true;
     tree.add(lower);
 
     const upper = new THREE.Mesh(
@@ -54,6 +55,7 @@ export function buildTrees(heightAt, count = 90) {
     );
     upper.position.y = trunkH * 0.55 + (trunkH * 0.55) / 2;
     upper.castShadow = true;
+    upper.receiveShadow = true;
     tree.add(upper);
 
     if (pine) {
@@ -68,6 +70,7 @@ export function buildTrees(heightAt, count = 90) {
         );
         cone.position.y = trunkH * 0.55 + l * 0.72 * scale + h * 0.35;
         cone.castShadow = true;
+        cone.receiveShadow = true;
         tree.add(cone);
       }
     } else {
@@ -79,6 +82,7 @@ export function buildTrees(heightAt, count = 90) {
       crown.position.y = trunkH + 0.9 * scale;
       crown.scale.y = 0.8;
       crown.castShadow = true;
+      crown.receiveShadow = true;
       tree.add(crown);
 
       const blobs = 2 + Math.floor(Math.random() * 2);
@@ -97,6 +101,7 @@ export function buildTrees(heightAt, count = 90) {
         );
         blob.scale.y = 0.85;
         blob.castShadow = true;
+        blob.receiveShadow = true;
         tree.add(blob);
       }
     }
@@ -112,12 +117,12 @@ export function buildTrees(heightAt, count = 90) {
   return { group, trees };
 }
 
-// 交叉双片草丛（InstancedMesh），比单片更饱满自然
-export function buildGrass(heightAt, count = 600) {
+// 交叉双片草丛（InstancedMesh），比单片更饱满自然；每株带轻微色差
+export function buildGrass(heightAt, count = 900) {
   const geo = new THREE.PlaneGeometry(0.22, 0.6);
   geo.translate(0, 0.3, 0);
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x557a3c,
+    color: 0xffffff,
     side: THREE.DoubleSide,
     roughness: 1,
     metalness: 0,
@@ -125,7 +130,11 @@ export function buildGrass(heightAt, count = 600) {
 
   const meshA = new THREE.InstancedMesh(geo, mat, count);
   const meshB = new THREE.InstancedMesh(geo, mat, count);
+  meshA.receiveShadow = true;
+  meshB.receiveShadow = true;
   const dummy = new THREE.Object3D();
+  const base = new THREE.Color(0x557a3c);
+  const tint = new THREE.Color();
 
   let i = 0;
   let attempts = 0;
@@ -149,10 +158,18 @@ export function buildGrass(heightAt, count = 600) {
     dummy.updateMatrix();
     meshB.setMatrixAt(i, dummy.matrix);
 
+    // 亮度在基准草色上下浮动，避免整片同色
+    const k = 0.82 + Math.random() * 0.35;
+    tint.copy(base).multiplyScalar(k);
+    meshA.setColorAt(i, tint);
+    meshB.setColorAt(i, tint);
+
     i++;
   }
   meshA.count = i;
   meshB.count = i;
+  meshA.instanceColor.needsUpdate = true;
+  meshB.instanceColor.needsUpdate = true;
 
   const group = new THREE.Group();
   group.add(meshA, meshB);

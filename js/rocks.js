@@ -46,6 +46,7 @@ export function buildRocks(heightAt, count = 40) {
       );
       chip.rotation.set(Math.random(), Math.random() * Math.PI, Math.random());
       chip.castShadow = true;
+      chip.receiveShadow = true;
       rockGroup.add(chip);
     }
 

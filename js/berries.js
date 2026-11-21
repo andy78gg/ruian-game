@@ -44,6 +44,7 @@ export function buildBerries(heightAt, count = 24) {
       );
       leaf.scale.y = 0.75;
       leaf.castShadow = true;
+      leaf.receiveShadow = true;
       bush.add(leaf);
     }
 
