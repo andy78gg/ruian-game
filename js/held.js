@@ -56,6 +56,13 @@ function buildModel(type) {
       g.add(cob, husk);
       break;
     }
+    case 'berry': {
+      const fruitMat = new THREE.MeshStandardMaterial({ color: 0xc23b3e, roughness: 0.7 });
+      const fruit = mesh(new THREE.SphereGeometry(0.06, 6, 6), fruitMat, 0, 0, 0);
+      const leaf = mesh(new THREE.ConeGeometry(0.03, 0.06, 5), MAT.leaf, 0, 0.07, 0);
+      g.add(fruit, leaf);
+      break;
+    }
     default: {
       const stick = mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 5), MAT.wood, 0, 0, 0);
       g.add(stick);
