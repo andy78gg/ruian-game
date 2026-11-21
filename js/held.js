@@ -122,6 +122,17 @@ function buildArm() {
   return g;
 }
 
+// 不同手持物的基础前倾角：工具头朝向前方世界（相机 -z），柄尾收向手；盾平持正对镜头。
+const TILT = {
+  pickaxe: -0.85,
+  axe: -0.85,
+  spear: -1.25,
+  shield: 0,
+  food: -0.5,
+  berry: -0.5,
+  default: -0.85,
+};
+
 // 手持物：挂在相机右下，切换物品时替换模型，左键触发挥动动画。
 export function createHeld(camera) {
   const holder = new THREE.Group();
@@ -131,6 +142,10 @@ export function createHeld(camera) {
   const arm = buildArm();
   holder.add(arm);
 
+  // pivot 承载基础前倾姿态；holder 负责呼吸/步伐/挥动摆动，两者解耦。
+  const pivot = new THREE.Group();
+  holder.add(pivot);
+
   let current = null;
   let swing = 0;
   let idleTime = 0;      // 待机呼吸累积时间
@@ -138,9 +153,12 @@ export function createHeld(camera) {
   let moveBlend = 0;     // 静止↔移动平滑过渡 0..1
 
   function setItem(item) {
-    if (current) holder.remove(current);
+    if (current) pivot.remove(current);
     current = buildModel(item.model);
-    holder.add(current);
+    pivot.rotation.x = TILT[item.model] ?? TILT.default;
+    pivot.rotation.z = 0.1;
+    pivot.position.y = -0.05;
+    pivot.add(current);
   }
 
   function triggerSwing() {

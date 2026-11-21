@@ -139,6 +139,46 @@ canvas { display: block; }
 
 #build-hint.show { opacity: 1; }
 
+/* 中心准星：十字短线，不拦截鼠标 */
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 6;
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+}
+
+/* 横线：左右两段，中心留空 */
+#crosshair::before {
+  left: 0;
+  top: 50%;
+  width: 22px;
+  height: 2px;
+  transform: translateY(-50%);
+  clip-path: polygon(0 0, 35% 0, 35% 100%, 0 100%, 65% 0, 100% 0, 100% 100%, 65% 100%);
+}
+
+/* 竖线：上下两段 */
+#crosshair::after {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 22px;
+  transform: translateX(-50%);
+  clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%, 0 65%, 100% 65%, 100% 100%, 0 100%);
+}
+
 /* 受击泛红遮罩：四周径向渐变红，由 JS 控制透明度淡出 */
 #hurt-overlay {
   position: fixed;
