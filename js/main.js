@@ -9,6 +9,7 @@ import { createHotbar } from './hotbar.js';
 import { createHeld } from './held.js';
 import { createInventory } from './inventory.js';
 import { createGather } from './gather.js';
+import { createBuilding } from './building.js';
 
 // ---------- 场景 ----------
 const scene = new THREE.Scene();
@@ -70,6 +71,7 @@ const gather = createGather({
   hotbar,
   onTip: showTip,
 });
+const building = createBuilding({ scene, heightAt, inventory, onTip: showTip });
 
 // ---------- HUD ----------
 const el = {
@@ -98,6 +100,14 @@ function updateHUD() {
   el.phase.textContent = `${p.label} · ${p.next} ${formatTime(p.remaining)}`;
   el.health.style.width = `${survival.state.health}%`;
   el.food.style.width = `${survival.state.food}%`;
+
+  const hint = document.getElementById('build-hint');
+  if (building.buildMode) {
+    hint.textContent = `建造：${building.partName} · Q/E 或滚轮切换 · 左键放置 · 右键拆除`;
+    hint.classList.add('show');
+  } else {
+    hint.classList.remove('show');
+  }
 }
 
 // ---------- 玩家（第一人称） ----------
@@ -122,18 +132,30 @@ addEventListener('keydown', (e) => {
     const n = Number(e.code.slice(5));
     if (n >= 1 && n <= ITEMS.length) hotbar.select(n - 1);
   }
+  if (e.code === 'KeyB') building.toggle();
+  if (e.code === 'KeyQ') building.cycle(-1);
+  if (e.code === 'KeyE') building.cycle(1);
 });
 addEventListener('keyup', (e) => (keys[e.code] = false));
+
+addEventListener('wheel', (e) => {
+  if (building.buildMode) building.cycle(e.deltaY > 0 ? 1 : -1);
+});
 
 const canvas = renderer.domElement;
 let locked = false;
 canvas.addEventListener('click', () => canvas.requestPointerLock());
 canvas.addEventListener('mousedown', (e) => {
-  if (locked && e.button === 0) {
+  if (!locked) return;
+  if (e.button === 0) {
     held.triggerSwing();
-    gather.tryHit();
+    if (building.buildMode) building.place(player);
+    else gather.tryHit();
+  } else if (e.button === 2 && building.buildMode) {
+    building.removeAt(camera);
   }
 });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 document.addEventListener('pointerlockchange', () => {
   locked = document.pointerLockElement === canvas;
 });
@@ -155,6 +177,7 @@ function animate() {
   dayNight.update(dt);
   survival.update(dt);
   held.update(dt);
+  building.update(player);
 
   const speed = keys['ShiftLeft'] || keys['ShiftRight'] ? 9 : 5;
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
