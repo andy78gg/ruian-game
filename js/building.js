@@ -17,13 +17,13 @@ const PARTS = {
 
 const PART_KEYS = Object.keys(PARTS);
 
-const MAT_WOOD = new THREE.MeshStandardMaterial({ color: 0x9c6b3f, flatShading: true, roughness: 1 });
-const MAT_DOOR = new THREE.MeshStandardMaterial({ color: 0x7a4f2a, flatShading: true, roughness: 1 });
-const MAT_METAL = new THREE.MeshStandardMaterial({ color: 0x9aa2ad, flatShading: true, roughness: 0.6 });
-const MAT_FLOOR = new THREE.MeshStandardMaterial({ color: 0xa97c50, flatShading: true, roughness: 1 });
-const MAT_ROOF = new THREE.MeshStandardMaterial({ color: 0x6b5138, flatShading: true, roughness: 1 });
-const MAT_SPIKE = new THREE.MeshStandardMaterial({ color: 0x8d8d8d, flatShading: true, roughness: 0.8 });
-const MAT_CHEST = new THREE.MeshStandardMaterial({ color: 0x6e4a2c, flatShading: true, roughness: 1 });
+const MAT_WOOD = new THREE.MeshStandardMaterial({ color: 0x9c6b3f, flatShading: false, roughness: 0.85 });
+const MAT_DOOR = new THREE.MeshStandardMaterial({ color: 0x7a4f2a, flatShading: false, roughness: 0.9 });
+const MAT_METAL = new THREE.MeshStandardMaterial({ color: 0x9aa2ad, flatShading: false, roughness: 0.5, metalness: 0.4 });
+const MAT_FLOOR = new THREE.MeshStandardMaterial({ color: 0xa97c50, flatShading: false, roughness: 0.9 });
+const MAT_ROOF = new THREE.MeshStandardMaterial({ color: 0x6b5138, flatShading: false, roughness: 0.95 });
+const MAT_SPIKE = new THREE.MeshStandardMaterial({ color: 0x8d8d8d, flatShading: false, roughness: 0.85, metalness: 0.15 });
+const MAT_CHEST = new THREE.MeshStandardMaterial({ color: 0x6e4a2c, flatShading: false, roughness: 0.9 });
 const MAT_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fc4d8, transparent: true, opacity: 0.45, roughness: 0.2, metalness: 0.1 });
 const MAT_FLAME = new THREE.MeshStandardMaterial({ color: 0xffa040, emissive: 0xff7a2a, emissiveIntensity: 1.4, roughness: 0.6 });
 
@@ -228,6 +228,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     solid.position.set(p.x, p.y + part.size[1] / 2, p.z);
     solid.rotation.y = p.rot;
     solid.castShadow = true;
+    solid.receiveShadow = true;
     scene.add(solid);
 
     if (PARTS[partKey].light) {
