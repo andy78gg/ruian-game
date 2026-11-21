@@ -38,6 +38,7 @@ export function createHotbar(items) {
   return {
     state,
     select,
+    refresh: render,
     set onChange(fn) {
       onChange = fn;
     },

@@ -22,5 +22,10 @@ export function createSurvival() {
     }
   }
 
-  return { state, update };
+  function eat() {
+    state.food = Math.min(100, state.food + 25);
+    state.health = Math.min(100, state.health + 10);
+  }
+
+  return { state, update, eat };
 }

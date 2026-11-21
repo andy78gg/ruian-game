@@ -89,6 +89,19 @@ function showTip(text) {
   tipTimer = setTimeout(() => tip.classList.remove('show'), 1200);
 }
 
+function tryEat() {
+  const item = hotbar.state.items[hotbar.state.selected];
+  if (item.model !== 'food') return;
+  if (item.count <= 0) {
+    showTip('没有食物了');
+    return;
+  }
+  item.count -= 1;
+  survival.eat();
+  hotbar.refresh();
+  showTip('进食：饱食度 +25，生命 +10');
+}
+
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
@@ -135,6 +148,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyB') building.toggle();
   if (e.code === 'KeyQ') building.cycle(-1);
   if (e.code === 'KeyE') building.cycle(1);
+  if (e.code === 'KeyF') tryEat();
 });
 addEventListener('keyup', (e) => (keys[e.code] = false));
 
@@ -151,8 +165,9 @@ canvas.addEventListener('mousedown', (e) => {
     held.triggerSwing();
     if (building.buildMode) building.place(player);
     else gather.tryHit();
-  } else if (e.button === 2 && building.buildMode) {
-    building.removeAt(camera);
+  } else if (e.button === 2) {
+    if (building.buildMode) building.removeAt(camera);
+    else tryEat();
   }
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
