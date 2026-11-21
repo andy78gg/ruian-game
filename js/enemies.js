@@ -55,7 +55,12 @@ export function createEnemies({
       roughness: 0.9,
       flatShading: false,
     });
-    const eyeMat = new THREE.MeshBasicMaterial({ color: EYE_COLOR });
+    const eyeMat = new THREE.MeshStandardMaterial({
+      color: 0x220000,
+      emissive: 0xff2010,
+      emissiveIntensity: 2.0,
+      roughness: 0.5,
+    });
 
     const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 1.0, 6), bodyMat);
     body.position.y = 0.5;
