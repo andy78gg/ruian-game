@@ -20,7 +20,22 @@ export function createDayNight({ scene, sun, hemi }) {
   scene.add(skyDome);
   const skyMat = skyDome.material;
 
+  // 可见太阳圆盘与月亮：沿太阳轨迹方向置于远处，白天显太阳、夜晚显月亮
+  const sunDisc = new THREE.Mesh(
+    new THREE.SphereGeometry(7, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xfff2c0, fog: false })
+  );
+  const moon = new THREE.Mesh(
+    new THREE.SphereGeometry(5, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xdde6f5, fog: false })
+  );
+  scene.add(sunDisc, moon);
+
+  const clouds = buildClouds();
+  scene.add(clouds.group);
+
   const skyColor = new THREE.Color();
+  const sunDir = new THREE.Vector3();
 
   function buildSkyDome() {
     const geo = new THREE.SphereGeometry(220, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
@@ -41,6 +56,36 @@ export function createDayNight({ scene, sun, hemi }) {
       fog: false,
     });
     return new THREE.Mesh(geo, mat);
+  }
+
+  function buildClouds() {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.8,
+      roughness: 1,
+      flatShading: false,
+      fog: false,
+      depthWrite: false,
+    });
+    const clouds = [];
+    for (let i = 0; i < 7; i++) {
+      const c = new THREE.Group();
+      const blobs = 3 + Math.floor(Math.random() * 3);
+      for (let b = 0; b < blobs; b++) {
+        const r = 2 + Math.random() * 2.5;
+        const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), mat);
+        m.position.set((b - blobs / 2) * 2.2, Math.random() * 0.8, (Math.random() - 0.5) * 2);
+        m.scale.y = 0.6;
+        c.add(m);
+      }
+      c.position.set((Math.random() - 0.5) * 160, 28 + Math.random() * 14, (Math.random() - 0.5) * 160);
+      c.userData.speed = 0.6 + Math.random() * 0.8;
+      group.add(c);
+      clouds.push(c);
+    }
+    return { group, clouds, mat };
   }
 
   function buildStars() {
@@ -102,6 +147,21 @@ export function createDayNight({ scene, sun, hemi }) {
     skyMat.color.lerp(SKY_DUSK, duskFactor * 0.35);
 
     stars.material.opacity = (1 - dayFactor) * 0.9;
+
+    // 天体跟随轨迹：太阳白天可见，月亮夜晚可见
+    sunDir.set(azimuth, elevation, 0.5).normalize();
+    sunDisc.position.copy(sunDir).multiplyScalar(160);
+    moon.position.copy(sunDir).multiplyScalar(-160);
+    sunDisc.visible = elevation > -0.12;
+    moon.visible = elevation < 0.12;
+    sunDisc.material.color.copy(SUN_DAY).lerp(SUN_DUSK, duskFactor);
+
+    // 云层缓慢漂移，夜晚随天光压暗
+    for (const c of clouds.clouds) {
+      c.position.x += c.userData.speed * dt;
+      if (c.position.x > 90) c.position.x = -90;
+    }
+    clouds.mat.color.set(0xffffff).lerp(NIGHT_TINT, 1 - dayFactor);
   }
 
   function getPhase() {
