@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { buildTerrain } from './terrain.js';
 import { buildTrees, buildGrass } from './trees.js';
+import { buildRocks } from './rocks.js';
 import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
 import { createHotbar } from './hotbar.js';
 import { createHeld } from './held.js';
+import { createInventory } from './inventory.js';
+import { createGather } from './gather.js';
 
 // ---------- 场景 ----------
 const scene = new THREE.Scene();
@@ -41,7 +44,10 @@ scene.add(sun);
 // ---------- 地形 / 植被 ----------
 const { mesh: terrain, heightAt } = buildTerrain();
 scene.add(terrain);
-scene.add(buildTrees(heightAt, 90));
+const trees = buildTrees(heightAt, 90);
+const rocks = buildRocks(heightAt, 40);
+scene.add(trees.group);
+scene.add(rocks.group);
 scene.add(buildGrass(heightAt, 350));
 
 // ---------- 昼夜循环 / 生存数值 ----------
@@ -54,12 +60,32 @@ const held = createHeld(camera);
 hotbar.onChange = (item) => held.setItem(item);
 held.setItem(ITEMS[0]);
 
+// ---------- 背包 / 采集 ----------
+const inventory = createInventory();
+const gather = createGather({
+  camera,
+  trees: trees.trees,
+  rocks: rocks.rocks,
+  inventory,
+  hotbar,
+  onTip: showTip,
+});
+
 // ---------- HUD ----------
 const el = {
   phase: document.getElementById('phase'),
   health: document.getElementById('health-bar'),
   food: document.getElementById('food-bar'),
 };
+
+let tipTimer = null;
+function showTip(text) {
+  const tip = document.getElementById('gather-tip');
+  tip.textContent = text;
+  tip.classList.add('show');
+  clearTimeout(tipTimer);
+  tipTimer = setTimeout(() => tip.classList.remove('show'), 1200);
+}
 
 function formatTime(s) {
   const m = Math.floor(s / 60);
@@ -103,7 +129,10 @@ const canvas = renderer.domElement;
 let locked = false;
 canvas.addEventListener('click', () => canvas.requestPointerLock());
 canvas.addEventListener('mousedown', (e) => {
-  if (locked && e.button === 0) held.triggerSwing();
+  if (locked && e.button === 0) {
+    held.triggerSwing();
+    gather.tryHit();
+  }
 });
 document.addEventListener('pointerlockchange', () => {
   locked = document.pointerLockElement === canvas;

@@ -6,6 +6,7 @@ const LEAF_COLORS = [0x2f6b2e, 0x3a7a33, 0x275c2a, 0x46853a];
 // 在地形上随机放置低多边形树木：圆冠橡树 / 尖冠松树两种
 export function buildTrees(heightAt, count = 90) {
   const group = new THREE.Group();
+  const trees = [];
 
   const trunkMat = new THREE.MeshStandardMaterial({
     color: TRUNK_COLOR,
@@ -69,10 +70,11 @@ export function buildTrees(heightAt, count = 90) {
     tree.position.set(x, y, z);
     tree.rotation.y = Math.random() * Math.PI * 2;
     group.add(tree);
+    trees.push({ group: tree, hp: 3, alive: true, kind: 'tree' });
     placed++;
   }
 
-  return group;
+  return { group, trees };
 }
 
 // 用 InstancedMesh 撒一层低多边形草叶
