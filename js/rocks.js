@@ -52,7 +52,7 @@ export function buildRocks(heightAt, count = 40) {
     rockGroup.position.set(x, y, z);
     group.add(rockGroup);
 
-    rocks.push({ group: rockGroup, hp: 4, alive: true, kind: 'rock' });
+    rocks.push({ group: rockGroup, hp: 4, alive: true, kind: 'rock', x, z, radius: s * 0.85 });
     placed++;
   }
 

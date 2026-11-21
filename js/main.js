@@ -143,6 +143,69 @@ const player = {
 };
 camera.position.set(0, player.y + EYE_HEIGHT, 0);
 
+// ---------- 实体碰撞：树 / 岩石圆形推挤，墙板 AABB 推挤 ----------
+const PLAYER_RADIUS = 0.35;
+
+function resolveCollisions() {
+  // 树木
+  for (const t of trees.trees) {
+    if (!t.alive) continue;
+    const dx = player.x - t.x;
+    const dz = player.z - t.z;
+    const d = Math.hypot(dx, dz);
+    const min = PLAYER_RADIUS + t.radius;
+    if (d < min && d > 1e-4) {
+      player.x = t.x + (dx / d) * min;
+      player.z = t.z + (dz / d) * min;
+    }
+  }
+
+  // 岩石
+  for (const r of rocks.rocks) {
+    if (!r.alive) continue;
+    const dx = player.x - r.x;
+    const dz = player.z - r.z;
+    const d = Math.hypot(dx, dz);
+    const min = PLAYER_RADIUS + r.radius;
+    if (d < min && d > 1e-4) {
+      player.x = r.x + (dx / d) * min;
+      player.z = r.z + (dz / d) * min;
+    }
+  }
+
+  // 墙板（门位留空可通行）
+  for (const c of building.getColliders()) {
+    const [w, , th] = c.size;
+    const rotated = Math.abs(Math.sin(c.rot)) > 0.5;
+    const hw = (rotated ? th : w) / 2;
+    const hd = (rotated ? w : th) / 2;
+    const dx = player.x - c.x;
+    const dz = player.z - c.z;
+    const cx = THREE.MathUtils.clamp(dx, -hw, hw);
+    const cz = THREE.MathUtils.clamp(dz, -hd, hd);
+    const px = dx - cx;
+    const pz = dz - cz;
+    const d = Math.hypot(px, pz);
+    if (d >= PLAYER_RADIUS) continue;
+
+    if (d > 1e-4) {
+      player.x = c.x + cx + (px / d) * PLAYER_RADIUS;
+      player.z = c.z + cz + (pz / d) * PLAYER_RADIUS;
+    } else {
+      // 圆心落入盒内：沿穿透最浅的轴推出
+      const pushLeft = dx + hw;
+      const pushRight = hw - dx;
+      const pushDown = dz + hd;
+      const pushUp = hd - dz;
+      const m = Math.min(pushLeft, pushRight, pushDown, pushUp);
+      if (m === pushLeft) player.x = c.x - hw - PLAYER_RADIUS;
+      else if (m === pushRight) player.x = c.x + hw + PLAYER_RADIUS;
+      else if (m === pushDown) player.z = c.z - hd - PLAYER_RADIUS;
+      else player.z = c.z + hd + PLAYER_RADIUS;
+    }
+  }
+}
+
 const keys = {};
 addEventListener('keydown', (e) => {
   keys[e.code] = true;
@@ -217,6 +280,8 @@ function animate() {
     player.x = THREE.MathUtils.clamp(player.x, -55, 55);
     player.z = THREE.MathUtils.clamp(player.z, -55, 55);
   }
+
+  resolveCollisions();
 
   // 跳跃与重力
   if (keys['Space'] && player.onGround) {

@@ -146,12 +146,25 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     refreshPreview();
   }
 
+  // 供移动碰撞使用：已放置墙板的轴对齐盒体（门位留空可通行）
+  function getColliders() {
+    return placed
+      .filter((p) => p.partKey !== 'door')
+      .map((p) => ({
+        x: p.mesh.position.x,
+        z: p.mesh.position.z,
+        rot: p.mesh.rotation.y,
+        size: PARTS[p.partKey].size,
+      }));
+  }
+
   return {
     toggle,
     cycle,
     place,
     removeAt,
     update,
+    getColliders,
     get buildMode() {
       return buildMode;
     },
