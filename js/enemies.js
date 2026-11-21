@@ -121,6 +121,8 @@ export function createEnemies({
       attackCd: 0,
       flash: 0,
       trapCd: 0,
+      dying: false,
+      dieTimer: 0,
       wanderAngle: Math.random() * Math.PI * 2,
       wanderTimer: 0,
     };
@@ -130,17 +132,20 @@ export function createEnemies({
 
   // 补一只敌人：优先复用尸体槽位，否则新增（不超上限）
   function replenish() {
-    const corpse = enemies.find((e) => !e.alive);
+    const corpse = enemies.find((e) => !e.alive && !e.dying);
     if (corpse) {
       const p = spawnPosition();
       corpse.x = p.x;
       corpse.z = p.z;
       corpse.hp = ENEMY_HP;
       corpse.alive = true;
+      corpse.dying = false;
+      corpse.dieTimer = 0;
       corpse.attackCd = 0;
       corpse.flash = 0;
       corpse.mats.body.color.setHex(BODY_COLOR);
       corpse.mats.head.color.setHex(HEAD_COLOR);
+      corpse.mesh.rotation.set(0, 0, 0);
       if (!corpse.mesh.parent) group.add(corpse.mesh);
       corpse.mesh.position.set(corpse.x, heightAt(corpse.x, corpse.z), corpse.z);
     } else if (enemies.length < WAVE_TARGET) {
@@ -205,10 +210,11 @@ export function createEnemies({
     }
   }
 
-  // 击败敌人：移除模型并掉落资源
+  // 击败敌人：进入倒地动画，短暂延迟后移除模型并掉落资源
   function killEnemy(e) {
     e.alive = false;
-    group.remove(e.mesh);
+    e.dying = true;
+    e.dieTimer = 0;
     const p = e.mesh.position.clone();
     p.y += 0.8;
     particles.burst(p, { color: 0xb02a2a, count: 14, size: 0.05, speed: 2.0, gravity: 8, life: 0.6 });
@@ -242,6 +248,18 @@ export function createEnemies({
     const hostile = phase === 'night' || phase === 'dusk';
 
     for (const e of enemies) {
+      // 倒地动画：侧身倒下并轻微下沉，结束后移除模型等待复用
+      if (e.dying) {
+        e.dieTimer += dt;
+        const t = Math.min(e.dieTimer / 0.6, 1);
+        e.mesh.rotation.z = t * 1.3;
+        e.mesh.position.y = heightAt(e.x, e.z) - t * 0.15;
+        if (e.dieTimer >= 0.6) {
+          group.remove(e.mesh);
+          e.dying = false;
+        }
+        continue;
+      }
       if (!e.alive) continue;
 
       // 受击闪红倒计时，结束后恢复原色
@@ -357,8 +375,11 @@ export function createEnemies({
       e.attackCd = 0;
       e.flash = 0;
       e.trapCd = 0;
+      e.dying = false;
+      e.dieTimer = 0;
       e.mats.body.color.setHex(BODY_COLOR);
       e.mats.head.color.setHex(HEAD_COLOR);
+      e.mesh.rotation.set(0, 0, 0);
       if (!e.mesh.parent) group.add(e.mesh);
       e.mesh.position.set(e.x, heightAt(e.x, e.z), e.z);
     }
