@@ -3,6 +3,7 @@ import { buildTerrain } from './terrain.js';
 import { buildTrees, buildGrass } from './trees.js';
 import { buildRocks } from './rocks.js';
 import { buildBerries } from './berries.js';
+import { buildScatter } from './scatter.js';
 import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
@@ -27,7 +28,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+renderer.toneMappingExposure = 1.15;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 scene.add(camera); // 相机加入场景图，手持物才能作为子节点渲染
@@ -43,11 +44,14 @@ const sun = new THREE.DirectionalLight(0xfff2d8, 1.6);
 sun.position.set(30, 45, 20);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -60;
-sun.shadow.camera.right = 60;
-sun.shadow.camera.top = 60;
-sun.shadow.camera.bottom = -60;
+sun.shadow.camera.left = -50;
+sun.shadow.camera.right = 50;
+sun.shadow.camera.top = 50;
+sun.shadow.camera.bottom = -50;
 sun.shadow.camera.far = 120;
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.03;
+sun.shadow.radius = 4;
 scene.add(sun);
 
 // ---------- 地形 / 植被 ----------
@@ -59,7 +63,8 @@ const berries = buildBerries(heightAt, 24);
 scene.add(trees.group);
 scene.add(rocks.group);
 scene.add(berries.group);
-scene.add(buildGrass(heightAt, 600));
+scene.add(buildGrass(heightAt, 900));
+scene.add(buildScatter(heightAt));
 
 // ---------- 昼夜循环 / 生存数值 ----------
 const dayNight = createDayNight({ scene, sun, hemi });
