@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { buildTerrain } from './terrain.js';
 import { buildTrees, buildGrass } from './trees.js';
+import { createDayNight } from './daynight.js';
+import { createSurvival } from './survival.js';
 
 // ---------- 场景 ----------
 const scene = new THREE.Scene();
@@ -38,6 +40,30 @@ scene.add(terrain);
 scene.add(buildTrees(heightAt, 90));
 scene.add(buildGrass(heightAt, 350));
 
+// ---------- 昼夜循环 / 生存数值 ----------
+const dayNight = createDayNight({ scene, sun, hemi });
+const survival = createSurvival();
+
+// ---------- HUD ----------
+const el = {
+  phase: document.getElementById('phase'),
+  health: document.getElementById('health-bar'),
+  food: document.getElementById('food-bar'),
+};
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function updateHUD() {
+  const p = dayNight.getPhase();
+  el.phase.textContent = `${p.label} · ${p.next} ${formatTime(p.remaining)}`;
+  el.health.style.width = `${survival.state.health}%`;
+  el.food.style.width = `${survival.state.food}%`;
+}
+
 // ---------- 玩家（第一人称） ----------
 const player = { x: 0, z: 0, yaw: 0, pitch: 0 };
 camera.position.set(0, heightAt(0, 0) + EYE_HEIGHT, 0);
@@ -67,6 +93,9 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
+  dayNight.update(dt);
+  survival.update(dt);
+
   const speed = keys['ShiftLeft'] || keys['ShiftRight'] ? 9 : 5;
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new THREE.Vector3(-forward.z, 0, forward.x);
@@ -91,6 +120,7 @@ function animate() {
   camera.rotation.y = player.yaw;
   camera.rotation.x = player.pitch;
 
+  updateHUD();
   renderer.render(scene, camera);
 }
 animate();
