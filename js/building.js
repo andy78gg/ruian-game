@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-// 可建造构件：cost 为消耗资源，size 为 [宽, 高, 厚]
+// 可建造构件：cost 为消耗资源，size 为 [宽, 高, 厚]，hp 为被敌人攻击的耐久
 const PARTS = {
-  wall: { name: '墙板', cost: { wood: 2 }, size: [2, 2.2, 0.15] },
-  door: { name: '木门', cost: { wood: 3 }, size: [1, 2, 0.12] },
+  wall: { name: '墙板', cost: { wood: 2 }, size: [2, 2.2, 0.15], hp: 6 },
+  door: { name: '木门', cost: { wood: 3 }, size: [1, 2, 0.12], hp: 4 },
 };
 
 const PART_KEYS = Object.keys(PARTS);
@@ -112,7 +112,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     solid.rotation.y = p.rot;
     solid.castShadow = true;
     scene.add(solid);
-    placed.push({ mesh: solid, partKey });
+    placed.push({ mesh: solid, partKey, hp: PARTS[partKey].hp });
   }
 
   function removeAt(camera) {
@@ -158,6 +158,24 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
       }));
   }
 
+  // 敌人攻击：对身边 range 内的构件造成 dmg 耐久，归零则塌掉（不返还资源）。返回是否命中构件。
+  function damageNearby(x, z, range, dmg) {
+    for (let i = placed.length - 1; i >= 0; i--) {
+      const p = placed[i];
+      const dx = p.mesh.position.x - x;
+      const dz = p.mesh.position.z - z;
+      if (Math.hypot(dx, dz) > range) continue;
+      p.hp -= dmg;
+      if (p.hp <= 0) {
+        scene.remove(p.mesh);
+        placed.splice(i, 1);
+        onTip(`${PARTS[p.partKey].name}被敌人撞塌了！`);
+      }
+      return true;
+    }
+    return false;
+  }
+
   return {
     toggle,
     cycle,
@@ -165,6 +183,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     removeAt,
     update,
     getColliders,
+    damageNearby,
     get buildMode() {
       return buildMode;
     },
