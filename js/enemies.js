@@ -14,6 +14,10 @@ const WANDER_SPEED = 0.7;
 const REACH = 3.2;
 const KNOCKBACK = 0.6;       // 受击后退距离
 const FLASH_TIME = 0.15;     // 受击闪红时长
+const WAVE_TARGET = 3;       // 夜晚同时存活上限
+const WAVE_INTERVAL = 8;     // 补怪间隔（秒）
+const STRUCTURE_RANGE = 1.3; // 敌人可拆墙/门的距离
+const STRUCTURE_DAMAGE = 1;  // 每次拆构件的耐久伤害
 // 武器伤害区分：斧 / 长矛 / 石矛 两下破甲，其余一下
 const DAMAGE_BY_TOOL = { axe: 2, spear: 2, stoneSpear: 2, pickaxe: 1 };
 
@@ -33,6 +37,7 @@ export function createEnemies({
   const group = new THREE.Group();
   scene.add(group);
   const enemies = [];
+  let spawnTimer = 0;
 
   const ray = new THREE.Raycaster();
   const box = new THREE.Box3();
@@ -111,6 +116,26 @@ export function createEnemies({
   }
 
   for (let i = 0; i < 2; i++) enemies.push(spawnEnemy());
+
+  // 补一只敌人：优先复用尸体槽位，否则新增（不超上限）
+  function replenish() {
+    const corpse = enemies.find((e) => !e.alive);
+    if (corpse) {
+      const p = spawnPosition();
+      corpse.x = p.x;
+      corpse.z = p.z;
+      corpse.hp = ENEMY_HP;
+      corpse.alive = true;
+      corpse.attackCd = 0;
+      corpse.flash = 0;
+      corpse.mats.body.color.setHex(BODY_COLOR);
+      corpse.mats.head.color.setHex(HEAD_COLOR);
+      if (!corpse.mesh.parent) group.add(corpse.mesh);
+      corpse.mesh.position.set(corpse.x, heightAt(corpse.x, corpse.z), corpse.z);
+    } else if (enemies.length < WAVE_TARGET) {
+      enemies.push(spawnEnemy());
+    }
+  }
 
   // 避障：树 / 岩石圆形推挤，墙板 AABB 推挤
   function resolveObstacles(e) {
@@ -195,17 +220,28 @@ export function createEnemies({
         // 追击玩家
         const dirX = dx / (dist || 1);
         const dirZ = dz / (dist || 1);
-        if (dist > ATTACK_RANGE) {
-          e.x += dirX * CHASE_SPEED * dt;
-          e.z += dirZ * CHASE_SPEED * dt;
-        }
         e.mesh.rotation.y = Math.atan2(dirX, dirZ);
 
         e.attackCd -= dt;
-        if (dist <= ATTACK_RANGE && e.attackCd <= 0) {
-          e.attackCd = ATTACK_COOLDOWN;
-          survival.damage(ATTACK_DAMAGE);
-          onTip('被敌人攻击！');
+        if (dist <= ATTACK_RANGE) {
+          // 近身攻击玩家
+          if (e.attackCd <= 0) {
+            e.attackCd = ATTACK_COOLDOWN;
+            survival.damage(ATTACK_DAMAGE);
+            onTip('被敌人攻击！');
+          }
+        } else {
+          // 贴在墙/门上：停下拆构件，冷却到点砸一下
+          const blocked = building.damageNearby(e.x, e.z, STRUCTURE_RANGE, 0);
+          if (blocked) {
+            if (e.attackCd <= 0) {
+              e.attackCd = ATTACK_COOLDOWN;
+              building.damageNearby(e.x, e.z, STRUCTURE_RANGE, STRUCTURE_DAMAGE);
+            }
+          } else {
+            e.x += dirX * CHASE_SPEED * dt;
+            e.z += dirZ * CHASE_SPEED * dt;
+          }
         }
       } else {
         // 白天缓慢游荡
@@ -224,6 +260,18 @@ export function createEnemies({
       e.z = THREE.MathUtils.clamp(e.z, -52, 52);
       resolveObstacles(e);
       e.mesh.position.set(e.x, heightAt(e.x, e.z), e.z);
+    }
+
+    // 波次补充：敌对阶段存活不足上限，按间隔补一只；白天不刷
+    const aliveCount = enemies.filter((e) => e.alive).length;
+    if (hostile && aliveCount < WAVE_TARGET) {
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnTimer = WAVE_INTERVAL;
+        replenish();
+      }
+    } else {
+      spawnTimer = 0;
     }
   }
 
@@ -260,6 +308,7 @@ export function createEnemies({
 
   // 重生时把敌人全部重置到远处、回满血量
   function reset() {
+    spawnTimer = 0;
     for (const e of enemies) {
       const p = spawnPosition();
       e.x = p.x;
