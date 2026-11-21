@@ -5,6 +5,7 @@ import { buildRocks } from './rocks.js';
 import { buildBerries } from './berries.js';
 import { buildScatter } from './scatter.js';
 import { buildMountains } from './mountains.js';
+import { buildWater } from './water.js';
 import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
@@ -85,6 +86,8 @@ const grass = buildGrass(heightAt, 900);
 scene.add(grass.group);
 scene.add(buildScatter(heightAt));
 scene.add(buildMountains(heightAt));
+const water = buildWater(heightAt);
+scene.add(water.group);
 
 // ---------- 昼夜循环 / 生存数值 ----------
 const dayNight = createDayNight({ scene, sun, hemi });
@@ -341,6 +344,7 @@ function animate() {
   enemies.update(dt);
   particles.update(dt);
   grass.update(elapsed);
+  water.update(elapsed);
 
   // 死亡检测与重生计时
   if (survival.state.health <= 0 && !dead) {
