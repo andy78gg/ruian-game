@@ -152,7 +152,16 @@ const enemies = createEnemies({
   survival,
   dayNight,
   onTip: showTip,
+  trees,
+  rocks,
+  building,
+  inventory,
 });
+
+// ---------- 死亡 / 重生 ----------
+let dead = false;
+let deathTimer = 0;
+const deathScreen = document.getElementById('death-screen');
 
 // ---------- 实体碰撞：树 / 岩石圆形推挤，墙板 AABB 推挤 ----------
 const PLAYER_RADIUS = 0.35;
@@ -218,6 +227,20 @@ function resolveCollisions() {
 }
 
 const keys = {};
+
+function respawn() {
+  player.x = 0;
+  player.z = 0;
+  player.y = heightAt(0, 0);
+  player.vy = 0;
+  player.onGround = true;
+  player.yaw = 0;
+  player.pitch = 0;
+  survival.respawn();
+  enemies.reset();
+  deathScreen.classList.remove('show');
+  dead = false;
+}
 addEventListener('keydown', (e) => {
   keys[e.code] = true;
   if (e.code === 'Space') e.preventDefault();
@@ -275,6 +298,19 @@ function animate() {
   building.update(player);
   enemies.update(dt);
 
+  // 死亡检测与重生计时
+  if (survival.state.health <= 0 && !dead) {
+    dead = true;
+    deathTimer = 0;
+    deathScreen.classList.add('show');
+    document.exitPointerLock();
+  }
+  if (dead) {
+    deathTimer += dt;
+    if (deathTimer >= 2.5) respawn();
+  }
+
+  if (!dead) {
   const speed = keys['ShiftLeft'] || keys['ShiftRight'] ? 9 : 5;
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new THREE.Vector3(-forward.z, 0, forward.x);
@@ -308,6 +344,7 @@ function animate() {
     player.y = groundY;
     player.vy = 0;
     player.onGround = true;
+  }
   }
 
   camera.position.set(player.x, player.y + EYE_HEIGHT, player.z);

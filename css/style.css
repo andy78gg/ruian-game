@@ -138,3 +138,35 @@ canvas { display: block; }
 }
 
 #build-hint.show { opacity: 1; }
+
+/* 死亡遮罩 */
+#death-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 8, 8, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 10;
+}
+
+#death-screen.show { opacity: 1; }
+
+#death-screen .death-title {
+  color: #fff;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+#death-screen .death-sub {
+  color: #e8c9c9;
+  font-size: 16px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}

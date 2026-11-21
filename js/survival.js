@@ -31,5 +31,12 @@ export function createSurvival() {
     state.health = Math.max(0, state.health - n);
   }
 
-  return { state, update, eat, damage };
+  function respawn() {
+    state.health = 100;
+    state.food = 100;
+    foodTimer = 0;
+    starveTimer = 0;
+  }
+
+  return { state, update, eat, damage, respawn };
 }

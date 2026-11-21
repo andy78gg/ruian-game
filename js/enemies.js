@@ -13,8 +13,19 @@ const CHASE_SPEED = 2.8;
 const WANDER_SPEED = 0.7;
 const REACH = 3.2;
 
-// 敌人 AI：黄昏/夜晚追击玩家并近身攻击，白天缓慢游荡；左键可击打。
-export function createEnemies({ scene, heightAt, player, survival, dayNight, onTip }) {
+// 敌人 AI：黄昏/夜晚追击玩家并近身攻击，白天缓慢游荡；左键可击打，击败掉落资源。
+export function createEnemies({
+  scene,
+  heightAt,
+  player,
+  survival,
+  dayNight,
+  onTip,
+  trees,
+  rocks,
+  building,
+  inventory,
+}) {
   const group = new THREE.Group();
   scene.add(group);
   const enemies = [];
@@ -75,12 +86,12 @@ export function createEnemies({ scene, heightAt, player, survival, dayNight, onT
     return { x: 20, z: 20 };
   }
 
-  for (let i = 0; i < 2; i++) {
+  function spawnEnemy() {
     const mesh = buildMesh();
     const p = spawnPosition();
     mesh.position.set(p.x, heightAt(p.x, p.z), p.z);
     group.add(mesh);
-    enemies.push({
+    return {
       mesh,
       x: p.x,
       z: p.z,
@@ -90,10 +101,72 @@ export function createEnemies({ scene, heightAt, player, survival, dayNight, onT
       attackCd: 0,
       wanderAngle: Math.random() * Math.PI * 2,
       wanderTimer: 0,
-    });
+    };
+  }
+
+  for (let i = 0; i < 2; i++) enemies.push(spawnEnemy());
+
+  // 避障：树 / 岩石圆形推挤，墙板 AABB 推挤
+  function resolveObstacles(e) {
+    for (const t of trees.trees) {
+      if (!t.alive) continue;
+      const dx = e.x - t.x;
+      const dz = e.z - t.z;
+      const d = Math.hypot(dx, dz);
+      const min = e.radius + t.radius;
+      if (d < min && d > 1e-4) {
+        e.x = t.x + (dx / d) * min;
+        e.z = t.z + (dz / d) * min;
+      }
+    }
+
+    for (const r of rocks.rocks) {
+      if (!r.alive) continue;
+      const dx = e.x - r.x;
+      const dz = e.z - r.z;
+      const d = Math.hypot(dx, dz);
+      const min = e.radius + r.radius;
+      if (d < min && d > 1e-4) {
+        e.x = r.x + (dx / d) * min;
+        e.z = r.z + (dz / d) * min;
+      }
+    }
+
+    for (const c of building.getColliders()) {
+      const [w, , th] = c.size;
+      const rotated = Math.abs(Math.sin(c.rot)) > 0.5;
+      const hw = (rotated ? th : w) / 2;
+      const hd = (rotated ? w : th) / 2;
+      const dx = e.x - c.x;
+      const dz = e.z - c.z;
+      const cx = THREE.MathUtils.clamp(dx, -hw, hw);
+      const cz = THREE.MathUtils.clamp(dz, -hd, hd);
+      const px = dx - cx;
+      const pz = dz - cz;
+      const d = Math.hypot(px, pz);
+      if (d >= e.radius) continue;
+
+      if (d > 1e-4) {
+        e.x = c.x + cx + (px / d) * e.radius;
+        e.z = c.z + cz + (pz / d) * e.radius;
+      } else {
+        const pushLeft = dx + hw;
+        const pushRight = hw - dx;
+        const pushDown = dz + hd;
+        const pushUp = hd - dz;
+        const m = Math.min(pushLeft, pushRight, pushDown, pushUp);
+        if (m === pushLeft) e.x = c.x - hw - e.radius;
+        else if (m === pushRight) e.x = c.x + hw + e.radius;
+        else if (m === pushDown) e.z = c.z - hd - e.radius;
+        else e.z = c.z + hd + e.radius;
+      }
+    }
   }
 
   function update(dt) {
+    // 玩家已死亡：敌人停手
+    if (survival.state.health <= 0) return;
+
     const phase = dayNight.getPhase().key;
     const hostile = phase === 'night' || phase === 'dusk';
 
@@ -134,6 +207,7 @@ export function createEnemies({ scene, heightAt, player, survival, dayNight, onT
 
       e.x = THREE.MathUtils.clamp(e.x, -52, 52);
       e.z = THREE.MathUtils.clamp(e.z, -52, 52);
+      resolveObstacles(e);
       e.mesh.position.set(e.x, heightAt(e.x, e.z), e.z);
     }
   }
@@ -149,7 +223,9 @@ export function createEnemies({ scene, heightAt, player, survival, dayNight, onT
         if (e.hp <= 0) {
           e.alive = false;
           group.remove(e.mesh);
-          onTip('击败了敌人');
+          inventory.add('wood', 1);
+          inventory.add('stone', 1);
+          onTip('击败了敌人：木材 +1，石头 +1');
         } else {
           onTip(`敌人受击，剩余 ${e.hp}`);
         }
@@ -159,5 +235,19 @@ export function createEnemies({ scene, heightAt, player, survival, dayNight, onT
     return false;
   }
 
-  return { update, tryHit, enemies };
+  // 重生时把敌人全部重置到远处、回满血量
+  function reset() {
+    for (const e of enemies) {
+      const p = spawnPosition();
+      e.x = p.x;
+      e.z = p.z;
+      e.hp = ENEMY_HP;
+      e.alive = true;
+      e.attackCd = 0;
+      if (!e.mesh.parent) group.add(e.mesh);
+      e.mesh.position.set(e.x, heightAt(e.x, e.z), e.z);
+    }
+  }
+
+  return { update, tryHit, reset, enemies };
 }
