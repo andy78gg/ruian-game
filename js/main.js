@@ -1,23 +1,23 @@
 import * as THREE from 'three';
-import { buildTerrain } from './terrain.js?v=7';
-import { buildTrees, buildGrass } from './trees.js?v=7';
-import { buildRocks } from './rocks.js?v=7';
-import { buildBerries } from './berries.js?v=7';
-import { buildScatter } from './scatter.js?v=7';
-import { buildMountains } from './mountains.js?v=7';
-import { buildWater } from './water.js?v=7';
-import { buildFlowers } from './flowers.js?v=7';
-import { createDayNight } from './daynight.js?v=7';
-import { createSurvival } from './survival.js?v=7';
-import { ITEMS } from './items.js?v=7';
-import { createHotbar } from './hotbar.js?v=7';
-import { createHeld } from './held.js?v=7';
-import { createInventory } from './inventory.js?v=7';
-import { createGather } from './gather.js?v=7';
-import { createBuilding } from './building.js?v=7';
-import { createEnemies } from './enemies.js?v=7';
-import { createParticles } from './particles.js?v=7';
-import { createAudio } from './audio.js?v=7';
+import { buildTerrain } from './terrain.js?v=8';
+import { buildTrees, buildGrass } from './trees.js?v=8';
+import { buildRocks } from './rocks.js?v=8';
+import { buildBerries } from './berries.js?v=8';
+import { buildScatter } from './scatter.js?v=8';
+import { buildMountains } from './mountains.js?v=8';
+import { buildWater } from './water.js?v=8';
+import { buildFlowers } from './flowers.js?v=8';
+import { createDayNight } from './daynight.js?v=8';
+import { createSurvival } from './survival.js?v=8';
+import { ITEMS } from './items.js?v=8';
+import { createHotbar } from './hotbar.js?v=8';
+import { createHeld } from './held.js?v=8';
+import { createInventory } from './inventory.js?v=8';
+import { createGather } from './gather.js?v=8';
+import { createBuilding } from './building.js?v=8';
+import { createEnemies } from './enemies.js?v=8';
+import { createParticles } from './particles.js?v=8';
+import { createAudio } from './audio.js?v=8';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -436,6 +436,14 @@ function animate() {
   }
 
   held.update(dt, moving, running);
+
+  // 临时调试：把握持点局部坐标写到页面 DOM，便于核对实际渲染位置
+  held._dbgF = (held._dbgF || 0) + 1;
+  if (held._dbgF % 10 === 0) {
+    const hp = held._holder.position;
+    const dbg = document.getElementById('dbg');
+    if (dbg) dbg.textContent = `holder x=${hp.x.toFixed(2)} y=${hp.y.toFixed(2)} z=${hp.z.toFixed(2)}`;
+  }
 
   camera.position.set(player.x, player.y + EYE_HEIGHT, player.z);
   camera.rotation.order = 'YXZ';
