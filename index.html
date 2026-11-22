@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ruian Game · 地形原型</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=14" />
   <script type="importmap">
     {
       "imports": {
@@ -17,7 +17,7 @@
 <body>
   <div id="hud">
     <div class="title">Ruian Game · 地形与树木原型</div>
-    <div class="tips">点击画面锁定鼠标 · WASD 移动 · Shift 奔跑 · 空格跳跃 · 鼠标控制视角</div>
+    <div class="tips">点击画面锁定鼠标 · WASD 移动 · Shift 奔跑 · 空格跳跃 · E 背包 · 鼠标控制视角</div>
   </div>
 
   <div id="phase"></div>
@@ -44,6 +44,14 @@
 
   <div id="hotbar"></div>
 
+  <div id="inventory-panel">
+    <div class="inv-title">背包 <span class="inv-hint">按 E 关闭</span></div>
+    <div class="inv-section">资源</div>
+    <div class="inv-grid" id="inv-resources"></div>
+    <div class="inv-section">物品</div>
+    <div class="inv-grid" id="inv-items"></div>
+  </div>
+
   <div id="crosshair"></div>
 
   <div id="hurt-overlay"></div>
@@ -53,6 +61,6 @@
     <div class="death-sub">正在重生…</div>
   </div>
 
-  <script type="module" src="js/main.js?v=13"></script>
+  <script type="module" src="js/main.js?v=14"></script>
 </body>
 </html>
