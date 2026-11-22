@@ -11,7 +11,7 @@ import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
 import { createHotbar } from './hotbar.js';
-import { createHeld } from './held.js?v=dbg2';
+import { createHeld } from './held.js?v=dbg3';
 import { createInventory } from './inventory.js';
 import { createGather } from './gather.js';
 import { createBuilding } from './building.js';
@@ -338,6 +338,7 @@ const clock = new THREE.Clock();
 let elapsed = 0;
 let splashTimer = 0;
 let stepDist = 0;
+let frame = 0;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -437,6 +438,29 @@ function animate() {
   }
 
   held.update(dt, moving, running);
+
+  // 调试：把当前手持物各部件的相机局部坐标写入标题（DOM 共享，供外部读取朝向）
+  frame++;
+  if (frame % 20 === 0) {
+    const cur = held._current();
+    const g = held._grip;
+    if (cur) {
+      cur.updateWorldMatrix(true, true);
+      const parts = [];
+      cur.traverse((m) => {
+        if (m.isMesh) {
+          const p = m.getWorldPosition(new THREE.Vector3());
+          camera.worldToLocal(p);
+          parts.push(m.geometry.type.slice(0, 4) + '@' + p.x.toFixed(2) + ',' + p.y.toFixed(2) + ',' + p.z.toFixed(2));
+        }
+      });
+      document.title = JSON.stringify({
+        grip: g.rotation.toArray().map((v) => +v.toFixed(2)),
+        curRot: cur.rotation.toArray().map((v) => +v.toFixed(2)),
+        parts,
+      });
+    }
+  }
 
   camera.position.set(player.x, player.y + EYE_HEIGHT, player.z);
   camera.rotation.order = 'YXZ';

@@ -217,5 +217,5 @@ export function createHeld(camera) {
     holder.rotation.z = breathRz + walkRz * moveBlend;
   }
 
-  return { setItem, triggerSwing, update };
+  return { setItem, triggerSwing, update, _holder: holder, _grip: grip, _current: () => current };
 }
