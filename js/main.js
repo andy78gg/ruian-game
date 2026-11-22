@@ -11,7 +11,7 @@ import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
 import { createHotbar } from './hotbar.js';
-import { createHeld } from './held.js';
+import { createHeld } from './held.js?v=dbg2';
 import { createInventory } from './inventory.js';
 import { createGather } from './gather.js';
 import { createBuilding } from './building.js';
