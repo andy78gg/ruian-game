@@ -4,7 +4,7 @@ const REACH = 3.5; // 采集距离
 const YIELD = { wood: 2, stone: 2 };
 
 // 采集判定：从相机中心射线命中树/石头/浆果灌木，校验工具，累计伤害，破坏后掉落资源。
-export function createGather({ camera, trees, rocks, berries, inventory, hotbar, onTip, particles }) {
+export function createGather({ camera, trees, rocks, berries, inventory, hotbar, onTip, particles, onSound }) {
   const ray = new THREE.Raycaster();
   const box = new THREE.Box3();
   const center = new THREE.Vector2(0, 0);
@@ -53,7 +53,9 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
       const p = obj.group.position.clone();
       p.y += 1.0;
       particles.burst(p, { color: 0x9c6b3f, count: 8, size: 0.04, speed: 1.4, gravity: 7, life: 0.5 });
+      const broke = obj.hp <= 1;
       damage(obj, 'wood');
+      if (onSound) onSound(broke ? 'pickup' : 'chop');
       return;
     }
 
@@ -65,7 +67,9 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
       const p = obj.group.position.clone();
       p.y += 0.4;
       particles.burst(p, { color: 0x9a9a9a, count: 8, size: 0.05, speed: 1.8, gravity: 9, life: 0.55 });
+      const broke = obj.hp <= 1;
       damage(obj, 'stone');
+      if (onSound) onSound(broke ? 'pickup' : 'chop');
       return;
     }
 
@@ -84,6 +88,7 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
       food.count += 1;
       hotbar.refresh();
     }
+    if (onSound) onSound('pickup');
     onTip('采到浆果 +1');
   }
 

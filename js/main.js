@@ -17,6 +17,7 @@ import { createGather } from './gather.js';
 import { createBuilding } from './building.js';
 import { createEnemies } from './enemies.js';
 import { createParticles } from './particles.js';
+import { createAudio } from './audio.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -95,7 +96,7 @@ scene.add(buildFlowers(heightAt));
 const dayNight = createDayNight({ scene, sun, hemi });
 const survival = createSurvival();
 let hurtTimer = 0;
-survival.setOnHurt(() => { hurtTimer = 0.35; });
+survival.setOnHurt(() => { hurtTimer = 0.35; audio.play('hurt'); });
 
 // ---------- 快捷栏 / 手持物 ----------
 const hotbar = createHotbar(ITEMS);
@@ -105,6 +106,7 @@ held.setItem(ITEMS[0]);
 
 // ---------- 背包 / 采集 ----------
 const particles = createParticles(scene);
+const audio = createAudio();
 const inventory = createInventory();
 const gather = createGather({
   camera,
@@ -115,6 +117,7 @@ const gather = createGather({
   hotbar,
   onTip: showTip,
   particles,
+  onSound: (n) => audio.play(n),
 });
 const building = createBuilding({ scene, heightAt, inventory, onTip: showTip });
 
@@ -145,6 +148,7 @@ function tryEat() {
   item.count -= 1;
   survival.eat();
   hotbar.refresh();
+  audio.play('eat');
   showTip('进食：饱食度 +25，生命 +10');
 }
 
@@ -196,6 +200,7 @@ const enemies = createEnemies({
   building,
   inventory,
   particles,
+  onSound: (n) => audio.play(n),
 });
 
 // ---------- 死亡 / 重生 ----------
@@ -282,6 +287,7 @@ function respawn() {
   dead = false;
 }
 addEventListener('keydown', (e) => {
+  audio.ensure();
   keys[e.code] = true;
   if (e.code === 'Space') e.preventDefault();
   if (e.code.startsWith('Digit')) {
@@ -301,11 +307,12 @@ addEventListener('wheel', (e) => {
 
 const canvas = renderer.domElement;
 let locked = false;
-canvas.addEventListener('click', () => canvas.requestPointerLock());
+canvas.addEventListener('click', () => { audio.ensure(); canvas.requestPointerLock(); });
 canvas.addEventListener('mousedown', (e) => {
   if (!locked) return;
   if (e.button === 0) {
     held.triggerSwing();
+    audio.play('swing');
     if (building.buildMode) building.place(player);
     else if (!enemies.tryHit(camera, hotbar.state.items[hotbar.state.selected])) gather.tryHit();
   } else if (e.button === 2) {
@@ -329,6 +336,7 @@ addEventListener('mousemove', (e) => {
 const clock = new THREE.Clock();
 let elapsed = 0;
 let splashTimer = 0;
+let stepDist = 0;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -390,9 +398,20 @@ function animate() {
         splashTimer = 0.28;
         const p = new THREE.Vector3(player.x, player.y + 0.1, player.z);
         particles.burst(p, { color: 0xbfe3ef, count: 5, size: 0.035, speed: 1.2, gravity: 6, life: 0.4 });
+        audio.play('splash');
       }
     } else {
       splashTimer = 0;
+    }
+
+    // 地面脚步：按步距累计触发，奔跑步幅更大
+    if (player.onGround) {
+      stepDist += speed * dt;
+      const stride = running ? 2.6 : 1.8;
+      if (stepDist >= stride) {
+        stepDist = 0;
+        audio.play('footstep');
+      }
     }
   }
 
