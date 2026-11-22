@@ -110,18 +110,6 @@ function buildModel(type) {
   return g;
 }
 
-// 常驻第一人称手臂：拳头握住工具下端，小臂与袖口伸向画面底边；作为 holder 子节点随呼吸/步伐一起摆动。
-function buildArm() {
-  const g = new THREE.Group();
-  const fist = mesh(new THREE.SphereGeometry(0.05, 10, 8), MAT.skin, 0, -0.2, 0.01);
-  fist.scale.set(0.9, 1.1, 0.9);
-  const fore = mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.3, 8), MAT.skin, 0.015, -0.4, 0.03, 0, 0, 0.15);
-  const sleeve = mesh(new THREE.CylinderGeometry(0.062, 0.058, 0.08, 8), MAT.sleeve, 0.02, -0.52, 0.035, 0, 0, 0.15);
-  g.add(fist, fore, sleeve);
-  g.rotation.z = 0.12;
-  return g;
-}
-
 // 不同手持物的基础前倾角：工具头朝向前方世界（相机 -z），柄尾收向手；盾平持正对镜头。
 const TILT = {
   pickaxe: -0.85,
@@ -133,32 +121,45 @@ const TILT = {
   default: -0.85,
 };
 
-// 手持物：挂在相机右下，切换物品时替换模型，左键触发挥动动画。
+// 方块风第一人称手臂：手掌包住柄尾，小臂与袖口斜伸向画面底边；与工具挂在同一 grip 下，随前倾一起动。
+function buildArm() {
+  const g = new THREE.Group();
+  // 手掌（方块），中心即握持点
+  const fist = mesh(new THREE.BoxGeometry(0.09, 0.1, 0.09), MAT.skin, 0, -0.02, 0);
+  // 小臂，略向后下倾斜
+  const fore = mesh(new THREE.BoxGeometry(0.075, 0.28, 0.075), MAT.skin, 0.012, -0.24, 0.02, 0, 0, 0.12);
+  const sleeve = mesh(new THREE.BoxGeometry(0.09, 0.09, 0.09), MAT.sleeve, 0.016, -0.4, 0.025, 0, 0, 0.12);
+  g.add(fist, fore, sleeve);
+  return g;
+}
+
+// 手持物：挂在相机右下，切换物品时替换模型，左键触发挥砍动画。
 export function createHeld(camera) {
   const holder = new THREE.Group();
-  holder.position.set(0.32, -0.28, -0.55);
+  holder.position.set(0.34, -0.3, -0.55);
   camera.add(holder);
 
-  const arm = buildArm();
-  holder.add(arm);
+  // grip 承载基础前倾姿态；手臂与工具都挂在 grip 下，保证手握柄不脱节。
+  const grip = new THREE.Group();
+  holder.add(grip);
 
-  // pivot 承载基础前倾姿态；holder 负责呼吸/步伐/挥动摆动，两者解耦。
-  const pivot = new THREE.Group();
-  holder.add(pivot);
+  const arm = buildArm();
+  grip.add(arm);
 
   let current = null;
   let swing = 0;
   let idleTime = 0;      // 待机呼吸累积时间
   let walkPhase = 0;     // 步伐相位
-  let moveBlend = 0;     // 静止↔移动平滑过渡 0..1
+  let moveBlend = 0;      // 静止↔移动平滑过渡 0..1
 
   function setItem(item) {
-    if (current) pivot.remove(current);
+    if (current) grip.remove(current);
     current = buildModel(item.model);
-    pivot.rotation.x = TILT[item.model] ?? TILT.default;
-    pivot.rotation.z = 0.1;
-    pivot.position.y = -0.05;
-    pivot.add(current);
+    // 把模型握把处抬到 grip 原点（手掌位置），柄尾落在掌心
+    current.position.y = 0.18;
+    grip.rotation.x = TILT[item.model] ?? TILT.default;
+    grip.rotation.z = 0.08;
+    grip.add(current);
   }
 
   function triggerSwing() {
@@ -172,14 +173,15 @@ export function createHeld(camera) {
     const blendTarget = moving ? 1 : 0;
     moveBlend += (blendTarget - moveBlend) * Math.min(1, dt * 8);
 
-    // 挥动动画优先级最高，直接覆盖位置与姿态
+    // 挥砍动画优先级最高：起手抬后 → 劈下 → 回收，带前后弧线与轻微横摆
     if (swing > 0) {
-      swing = Math.max(0, swing - dt * 3.2);
-      const k = 1 - swing;
-      holder.rotation.x = -Math.sin(k * Math.PI) * 0.7;
-      holder.rotation.z = 0;
-      holder.position.x = 0.32;
-      holder.position.y = -0.28 - Math.sin(k * Math.PI) * 0.05;
+      swing = Math.max(0, swing - dt * 3.0);
+      const k = 1 - swing;              // 0 → 1
+      const arc = Math.sin(k * Math.PI); // 0 → 1 → 0
+      holder.rotation.x = -arc * 0.65;
+      holder.rotation.z = Math.sin(k * Math.PI * 2) * 0.05;
+      holder.position.x = 0.34;
+      holder.position.y = -0.3 - arc * 0.06;
       return;
     }
 
@@ -192,12 +194,12 @@ export function createHeld(camera) {
 
     // 步伐摆动：左右平移、落地上下起伏、横滚与俯仰随步频
     const walkX = Math.sin(walkPhase) * 0.028;
-    const walkY = Math.abs(Math.sin(walkPhase)) * 0.022;
+    const walkY = Math.abs(Math.cos(walkPhase)) * 0.02;
     const walkRz = Math.sin(walkPhase) * 0.04;
     const walkRx = -Math.cos(walkPhase) * 0.03;
 
-    holder.position.x = 0.32 + walkX * moveBlend;
-    holder.position.y = -0.28 + breathY - walkY * moveBlend;
+    holder.position.x = 0.34 + walkX * moveBlend;
+    holder.position.y = -0.3 + breathY - walkY * moveBlend;
     holder.rotation.x = walkRx * moveBlend;
     holder.rotation.z = breathRz + walkRz * moveBlend;
   }
