@@ -1,23 +1,23 @@
 import * as THREE from 'three';
-import { buildTerrain } from './terrain.js?v=14';
-import { buildTrees, buildGrass } from './trees.js?v=14';
-import { buildRocks } from './rocks.js?v=14';
-import { buildBerries } from './berries.js?v=14';
-import { buildScatter } from './scatter.js?v=14';
-import { buildMountains } from './mountains.js?v=14';
-import { buildWater } from './water.js?v=14';
-import { buildFlowers } from './flowers.js?v=14';
-import { createDayNight } from './daynight.js?v=14';
-import { createSurvival } from './survival.js?v=14';
-import { ITEMS } from './items.js?v=14';
-import { createHotbar } from './hotbar.js?v=14';
-import { createHeld } from './held.js?v=14';
-import { createInventory } from './inventory.js?v=14';
-import { createGather } from './gather.js?v=14';
-import { createBuilding } from './building.js?v=14';
-import { createEnemies } from './enemies.js?v=14';
-import { createParticles } from './particles.js?v=14';
-import { createAudio } from './audio.js?v=14';
+import { buildTerrain } from './terrain.js?v=15';
+import { buildTrees, buildGrass } from './trees.js?v=15';
+import { buildRocks } from './rocks.js?v=15';
+import { buildBerries } from './berries.js?v=15';
+import { buildScatter } from './scatter.js?v=15';
+import { buildMountains } from './mountains.js?v=15';
+import { buildWater } from './water.js?v=15';
+import { buildFlowers } from './flowers.js?v=15';
+import { createDayNight } from './daynight.js?v=15';
+import { createSurvival } from './survival.js?v=15';
+import { ITEMS } from './items.js?v=15';
+import { createHotbar } from './hotbar.js?v=15';
+import { createHeld } from './held.js?v=15';
+import { createInventory } from './inventory.js?v=15';
+import { createGather } from './gather.js?v=15';
+import { createBuilding } from './building.js?v=15';
+import { createEnemies } from './enemies.js?v=15';
+import { createParticles } from './particles.js?v=15';
+import { createAudio } from './audio.js?v=15';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -107,7 +107,7 @@ held.setItem(ITEMS[0]);
 // ---------- 背包 / 采集 ----------
 const particles = createParticles(scene);
 const audio = createAudio();
-const inventory = createInventory();
+const inventory = createInventory({ hotbar });
 const gather = createGather({
   camera,
   trees: trees.trees,
@@ -289,7 +289,7 @@ function respawn() {
 addEventListener('keydown', (e) => {
   audio.ensure();
   if (e.code === 'KeyE') {
-    inventory.toggle(hotbar.state.items);
+    inventory.toggle();
     return;
   }
   // 背包打开时屏蔽移动、切槽、建造、进食等其余按键
