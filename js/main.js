@@ -328,6 +328,7 @@ addEventListener('mousemove', (e) => {
 // ---------- 主循环 ----------
 const clock = new THREE.Clock();
 let elapsed = 0;
+let splashTimer = 0;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -362,7 +363,8 @@ function animate() {
 
   if (!dead) {
   running = keys['ShiftLeft'] || keys['ShiftRight'];
-  const speed = running ? 9 : 5;
+  const inWater = water.isInWater(player.x, player.z);
+  const speed = (running ? 9 : 5) * (inWater ? 0.6 : 1);
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new THREE.Vector3(-forward.z, 0, forward.x);
   const move = new THREE.Vector3();
@@ -380,6 +382,18 @@ function animate() {
     player.z += move.z;
     player.x = THREE.MathUtils.clamp(player.x, -55, 55);
     player.z = THREE.MathUtils.clamp(player.z, -55, 55);
+
+    // 蹚水时脚边间歇溅起水花
+    if (inWater) {
+      splashTimer -= dt;
+      if (splashTimer <= 0) {
+        splashTimer = 0.28;
+        const p = new THREE.Vector3(player.x, player.y + 0.1, player.z);
+        particles.burst(p, { color: 0xbfe3ef, count: 5, size: 0.035, speed: 1.2, gravity: 6, life: 0.4 });
+      }
+    } else {
+      splashTimer = 0;
+    }
   }
 
   resolveCollisions();

@@ -87,7 +87,17 @@ export function buildWater(heightAt) {
     mesh.renderOrder = 1;
     group.add(mesh);
 
-    surfaces.push({ mesh, baseY: waterY, phase: Math.random() * Math.PI * 2 });
+    surfaces.push({ mesh, cx, cz, rx, rz, baseY: waterY, phase: Math.random() * Math.PI * 2 });
+  }
+
+  // 判断某点是否处于某片水面内（椭圆范围且地面低于水面）
+  function isInWater(x, z) {
+    for (const s of surfaces) {
+      const dx = (x - s.cx) / s.rx;
+      const dz = (z - s.cz) / s.rz;
+      if (dx * dx + dz * dz <= 1 && heightAt(x, z) < s.baseY - 0.05) return true;
+    }
+    return false;
   }
 
   // 轻微起伏 + 明暗脉动，模拟水面波纹反光
@@ -98,5 +108,5 @@ export function buildWater(heightAt) {
     waterMat.opacity = 0.7 + Math.sin(time * 1.1) * 0.03;
   }
 
-  return { group, update };
+  return { group, update, isInWater };
 }
