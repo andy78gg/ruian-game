@@ -105,6 +105,26 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
         }
         return g;
       }
+      case 'floor': {
+        const g = new THREE.Group();
+        const w = size[0], d = size[2], h = size[1];
+        const planks = 4;
+        const pw = w / planks;
+        for (let p = 0; p < planks; p++) {
+          g.add(boxMesh(pw - 0.02, h, d, material, -w / 2 + pw * (p + 0.5), h / 2, 0));
+        }
+        return g;
+      }
+      case 'roof': {
+        const g = new THREE.Group();
+        const w = size[0], d = size[2], h = size[1];
+        const tiles = 5;
+        const tw = d / tiles;
+        for (let t = 0; t < tiles; t++) {
+          g.add(boxMesh(w, h, tw - 0.015, material, 0, h / 2, -d / 2 + tw * (t + 0.5)));
+        }
+        return g;
+      }
       case 'stairs': {
         const g = new THREE.Group();
         const steps = 4;
