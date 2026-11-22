@@ -221,20 +221,20 @@ canvas { display: block; }
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
-/* 背包面板：按 E 开合，居中浮层 */
+/* 背包面板：Minecraft 风格深灰方格 */
 #inventory-panel {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.96);
-  width: 380px;
-  max-width: 86vw;
-  background: rgba(28, 24, 18, 0.92);
-  border: 2px solid rgba(214, 178, 116, 0.55);
-  border-radius: 12px;
-  padding: 18px 20px;
+  width: 420px;
+  max-width: 92vw;
+  background: #3f3a33;
+  border: 3px solid #1f1a14;
+  border-radius: 6px;
+  padding: 16px 18px;
   color: #fff;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease, transform 0.18s ease;
@@ -248,25 +248,49 @@ canvas { display: block; }
   pointer-events: auto;
 }
 
-.inv-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.inv-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
 .inv-hint { font-size: 12px; font-weight: 400; color: rgba(255, 255, 255, 0.6); margin-left: 8px; }
-.inv-section { font-size: 13px; color: #d6b274; margin: 10px 0 8px; }
-.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-
-.inv-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 8px 10px;
+.mc-section {
+  font-size: 11px;
+  color: #c9b18a;
+  margin: 12px 0 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.mc-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 38px);
+  gap: 4px;
+  justify-content: space-between;
 }
 
-.inv-cell.empty { opacity: 0.4; }
-.inv-icon { font-size: 22px; }
-.inv-name { flex: 1; font-size: 13px; }
-.inv-count { font-size: 12px; color: #ffd34d; }
+/* MC 方格槽位：凸起立体边框 */
+.mc-slot {
+  width: 38px;
+  height: 38px;
+  background: #7a7a7a;
+  border: 2px solid;
+  border-color: #9a9a9a #373737 #373737 #9a9a9a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.mc-slot.sm { width: 34px; height: 34px; }
+.mc-slot .mc-icon { font-size: 20px; line-height: 1; }
+.mc-slot.sm .mc-icon { font-size: 17px; }
+.mc-count {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+.mc-slot.empty { background: #5c5c5c; border-color: #6e6e6e #2e2e2e #2e2e2e #6e6e6e; }
+.mc-slot.active { background: #8a7a4a; border-color: #ffd34d #7a6420 #7a6420 #ffd34d; }
+.mc-slot.disabled { opacity: 0.45; }
 
 /* 背包 / 制作 标签页 */
 .inv-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
@@ -289,34 +313,29 @@ canvas { display: block; }
 .inv-pane { display: none; }
 .inv-pane.active { display: block; }
 
-/* 制作配方行 */
-.craft-row {
+/* MC 合成配方行：材料格 → 箭头 → 产物格 → 合成按钮 */
+.mc-recipe {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 8px;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.craft-row.locked { opacity: 0.55; }
-.craft-icon { font-size: 24px; }
-.craft-meta { flex: 1; }
-.craft-name { font-size: 14px; }
-.craft-cost { font-size: 12px; color: #d6b274; margin-top: 2px; }
-.craft-btn {
+.mc-recipe:last-child { border-bottom: none; }
+.mc-mats { display: flex; gap: 4px; }
+.mc-arrow { color: #c9b18a; font-size: 16px; }
+.mc-recipe .mc-slot { flex: none; }
+.mc-craft {
+  margin-left: auto;
   padding: 6px 14px;
-  background: #d6b274;
-  color: #2a2114;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
+  background: #6f6f6f;
+  border: 2px solid;
+  border-color: #9a9a9a #373737 #373737 #9a9a9a;
+  color: #fff;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
-.craft-btn:disabled {
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.5);
-  cursor: not-allowed;
-}
+.mc-craft:hover:not(:disabled) { background: #8a8a8a; }
+.mc-craft:disabled { opacity: 0.4; cursor: not-allowed; }
+.mc-recipe.locked .mc-arrow { opacity: 0.4; }

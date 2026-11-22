@@ -1,5 +1,5 @@
 // 资源背包：木材、石头计数；按 E 开合面板，含「背包」与「制作」两个标签。
-// 制作页消耗木材/石头合成工具，产出计入对应热栏物品。
+// 槽位采用 Minecraft 风格方格：立体边框、数量角标、物品栏 / 快捷栏分区。
 export function createInventory({ hotbar } = {}) {
   const state = { wood: 0, stone: 0 };
   const elWood = document.getElementById('wood-count');
@@ -7,6 +7,7 @@ export function createInventory({ hotbar } = {}) {
   const panel = document.getElementById('inventory-panel');
   const resGrid = document.getElementById('inv-resources');
   const itemGrid = document.getElementById('inv-items');
+  const hotGrid = document.getElementById('inv-hotbar');
   const recipeList = document.getElementById('inv-recipes');
   let open = false;
 
@@ -23,34 +24,58 @@ export function createInventory({ hotbar } = {}) {
     return hotbar ? hotbar.state.items.find((i) => i.id === id) : null;
   }
 
+  // 单个 MC 风格槽位
+  function slot(icon, name, count, opts = {}) {
+    const cls = ['mc-slot'];
+    if (opts.small) cls.push('sm');
+    if (opts.active) cls.push('active');
+    if (opts.empty) cls.push('empty');
+    if (opts.disabled) cls.push('disabled');
+    const countHtml = count != null ? `<span class="mc-count">${count}</span>` : '';
+    return `<div class="${cls.join(' ')}" title="${name}">
+      <span class="mc-icon">${icon}</span>${countHtml}
+    </div>`;
+  }
+
+  function emptySlot() {
+    return '<div class="mc-slot empty"></div>';
+  }
+
+  // 凑满一行 9 格空位
+  function padToNine(html, n) {
+    for (let i = n; i < 9; i++) html += emptySlot();
+    return html;
+  }
+
   function renderResources() {
-    resGrid.innerHTML = `
-      <div class="inv-cell">
-        <span class="inv-icon">🪵</span>
-        <span class="inv-name">木材</span>
-        <span class="inv-count">×${state.wood}</span>
-      </div>
-      <div class="inv-cell">
-        <span class="inv-icon">🪨</span>
-        <span class="inv-name">石头</span>
-        <span class="inv-count">×${state.stone}</span>
-      </div>`;
+    resGrid.innerHTML =
+      slot('🪵', '木材', state.wood) +
+      slot('🪨', '石头', state.stone);
   }
 
   function renderItems() {
     if (!hotbar) return;
-    itemGrid.innerHTML = hotbar.state.items.map((it) => `
-      <div class="inv-cell${it.count <= 0 ? ' empty' : ''}">
-        <span class="inv-icon">${it.icon}</span>
-        <span class="inv-name">${it.name}</span>
-        <span class="inv-count">${it.count > 1 ? '×' + it.count : ''}</span>
-      </div>`).join('');
+    let html = hotbar.state.items.map((it) =>
+      slot(it.icon, it.name, it.count, { disabled: it.count <= 0 })
+    ).join('');
+    itemGrid.innerHTML = padToNine(html, hotbar.state.items.length);
   }
 
-  function costText(cost) {
-    return Object.entries(cost)
-      .map(([k, v]) => `${k === 'wood' ? '🪵' : '🪨'}×${v}`)
-      .join(' ');
+  function renderHotbar() {
+    if (!hotbar) return;
+    const sel = hotbar.state.selected;
+    let html = hotbar.state.items.map((it, i) =>
+      slot(it.icon, it.name, it.count, { active: i === sel })
+    ).join('');
+    hotGrid.innerHTML = padToNine(html, hotbar.state.items.length);
+  }
+
+  function costSlots(cost) {
+    return Object.entries(cost).map(([k, v]) => {
+      const icon = k === 'wood' ? '🪵' : '🪨';
+      const enough = state[k] >= v;
+      return slot(icon, k === 'wood' ? '木材' : '石头', v, { small: true, disabled: !enough });
+    }).join('');
   }
 
   function canCraft(recipe) {
@@ -65,17 +90,15 @@ export function createInventory({ hotbar } = {}) {
       const name = it ? it.name : r.out;
       const ok = canCraft(r);
       return `
-      <div class="craft-row${ok ? '' : ' locked'}">
-        <span class="craft-icon">${icon}</span>
-        <div class="craft-meta">
-          <div class="craft-name">${name}</div>
-          <div class="craft-cost">${costText(r.cost)}</div>
-        </div>
-        <button class="craft-btn" data-out="${r.out}" ${ok ? '' : 'disabled'}>制作</button>
+      <div class="mc-recipe${ok ? '' : ' locked'}">
+        <div class="mc-mats">${costSlots(r.cost)}</div>
+        <div class="mc-arrow">→</div>
+        ${slot(icon, name, 1, { small: true, disabled: !ok })}
+        <button class="mc-craft" data-out="${r.out}" ${ok ? '' : 'disabled'}>合成</button>
       </div>`;
     }).join('');
 
-    recipeList.querySelectorAll('.craft-btn').forEach((btn) => {
+    recipeList.querySelectorAll('.mc-craft').forEach((btn) => {
       btn.addEventListener('click', () => craft(btn.dataset.out));
     });
   }
@@ -93,12 +116,14 @@ export function createInventory({ hotbar } = {}) {
     elStone.textContent = state.stone;
     renderResources();
     renderItems();
+    renderHotbar();
     renderRecipes();
   }
 
   function render() {
     renderResources();
     renderItems();
+    renderHotbar();
     renderRecipes();
   }
 
