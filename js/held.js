@@ -170,7 +170,7 @@ export function createHeld(camera) {
     current.position.y = 0.18;
     current.rotation.y = ROLL[item.model] ?? ROLL.default;
     grip.rotation.x = TILT[item.model] ?? TILT.default;
-    grip.rotation.y = -0.18;
+    grip.rotation.y = -0.30;
     grip.rotation.z = 0.06;
     grip.add(current);
   }
