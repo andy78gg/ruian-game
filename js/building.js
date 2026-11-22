@@ -57,6 +57,23 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     const size = PARTS[partKey].size;
 
     switch (partKey) {
+      case 'wall': {
+        const g = new THREE.Group();
+        const w = size[0], h = size[1], d = size[2];
+        // 竖向分板，板间留细缝
+        const boards = 4;
+        const bw = w / boards;
+        for (let b = 0; b < boards; b++) {
+          const board = boxMesh(bw - 0.025, h, d, material, -w / 2 + bw * (b + 0.5), h / 2, 0);
+          g.add(board);
+        }
+        // 两侧立柱 + 上下横档，深色木框收边
+        g.add(boxMesh(0.12, h + 0.08, d + 0.04, MAT_DOOR, -w / 2 + 0.06, (h + 0.08) / 2, 0));
+        g.add(boxMesh(0.12, h + 0.08, d + 0.04, MAT_DOOR, w / 2 - 0.06, (h + 0.08) / 2, 0));
+        g.add(boxMesh(w, 0.12, d + 0.02, MAT_DOOR, 0, 0.06, 0));
+        g.add(boxMesh(w, 0.12, d + 0.02, MAT_DOOR, 0, h - 0.06, 0));
+        return g;
+      }
       case 'door': {
         const g = new THREE.Group();
         const panel = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);

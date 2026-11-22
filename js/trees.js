@@ -117,12 +117,31 @@ export function buildTrees(heightAt, count = 90) {
   return { group, trees };
 }
 
-// 交叉双片草丛（InstancedMesh），比单片更饱满自然；每株带轻微色差，并随风轻摆
+// 尖叶草丛（InstancedMesh）：交叉双片，叶片收窄成尖梢并轻微后弯；根部深绿、梢部浅绿的顶点渐变，每株再带色差，随风轻摆
 export function buildGrass(heightAt, count = 900) {
-  const geo = new THREE.PlaneGeometry(0.22, 0.6);
+  const geo = new THREE.PlaneGeometry(0.22, 0.6, 1, 2);
   geo.translate(0, 0.3, 0);
+
+  // 收窄叶宽成尖梢，梢部略向后弯
+  const pos = geo.attributes.position;
+  const rootCol = new THREE.Color(0x3c5d2e);
+  const tipCol = new THREE.Color(0x779c4f);
+  const colArr = [];
+  const tmpCol = new THREE.Color();
+  for (let v = 0; v < pos.count; v++) {
+    const y = pos.getY(v);
+    const t = y / 0.6; // 0=根 1=梢
+    const width = 0.22 * (1 - 0.72 * t);
+    pos.setX(v, (pos.getX(v) / 0.22) * width);
+    pos.setZ(v, t * t * 0.06);
+    tmpCol.copy(rootCol).lerp(tipCol, t);
+    colArr.push(tmpCol.r, tmpCol.g, tmpCol.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colArr, 3));
+
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
+    vertexColors: true,
     side: THREE.DoubleSide,
     roughness: 1,
     metalness: 0,
@@ -133,7 +152,6 @@ export function buildGrass(heightAt, count = 900) {
   meshA.receiveShadow = true;
   meshB.receiveShadow = true;
   const dummy = new THREE.Object3D();
-  const base = new THREE.Color(0x557a3c);
   const tint = new THREE.Color();
   const blades = [];
 
@@ -160,9 +178,9 @@ export function buildGrass(heightAt, count = 900) {
     dummy.updateMatrix();
     meshB.setMatrixAt(i, dummy.matrix);
 
-    // 亮度在基准草色上下浮动，避免整片同色
-    const k = 0.82 + Math.random() * 0.35;
-    tint.copy(base).multiplyScalar(k);
+    // 亮度在基准上下浮动，避免整片同色；绿色基调由顶点渐变提供
+    const k = 0.85 + Math.random() * 0.3;
+    tint.setScalar(k);
     meshA.setColorAt(i, tint);
     meshB.setColorAt(i, tint);
 
