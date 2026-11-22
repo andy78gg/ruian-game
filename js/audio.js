@@ -1,8 +1,19 @@
-// 纯 WebAudio 合成短音效，不引入外部音频素材。
+// 纯 WebAudio 合成音频，不引入外部音频素材。
+// 包含一次性动作音效（挥砍/脚步/砍击/拾取/进食/受击/水花）与循环环境垫底音（风声/夜晚虫鸣）。
 // AudioContext 在首次用户手势（点击/按键）时创建并 resume，避免自动播放被拦截。
 export function createAudio() {
   let ctx = null;
   let master = null;
+  let ambientStarted = false;
+  let bugGain = null;
+
+  function makeNoiseBuffer(dur = 2) {
+    const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    return buffer;
+  }
 
   function ensure() {
     if (!ctx) {
@@ -12,9 +23,62 @@ export function createAudio() {
       master = ctx.createGain();
       master.gain.value = 0.5;
       master.connect(ctx.destination);
+      startAmbient();
     }
     if (ctx.state === 'suspended') ctx.resume();
     return true;
+  }
+
+  // 循环风声：低通白噪声 + 缓慢起伏；虫鸣：高频断奏，仅夜晚/黄昏可闻。
+  function startAmbient() {
+    if (ambientStarted) return;
+    ambientStarted = true;
+
+    // ---- 风声 ----
+    const windSrc = ctx.createBufferSource();
+    windSrc.buffer = makeNoiseBuffer(2);
+    windSrc.loop = true;
+    const windFilter = ctx.createBiquadFilter();
+    windFilter.type = 'lowpass';
+    windFilter.frequency.value = 380;
+    const windGain = ctx.createGain();
+    windGain.gain.value = 0.035;
+    // 风声强弱缓慢漂移
+    const windLfo = ctx.createOscillator();
+    windLfo.frequency.value = 0.15;
+    const windLfoGain = ctx.createGain();
+    windLfoGain.gain.value = 0.015;
+    windLfo.connect(windLfoGain).connect(windGain.gain);
+    windSrc.connect(windFilter).connect(windGain).connect(master);
+    windSrc.start();
+    windLfo.start();
+
+    // ---- 夜晚虫鸣 ----
+    const bugOsc = ctx.createOscillator();
+    bugOsc.type = 'sawtooth';
+    bugOsc.frequency.value = 4200;
+    const bugFilter = ctx.createBiquadFilter();
+    bugFilter.type = 'bandpass';
+    bugFilter.frequency.value = 4200;
+    bugFilter.Q.value = 6;
+    bugGain = ctx.createGain();
+    bugGain.gain.value = 0;
+    // LFO 产生断续唧唧节奏
+    const bugLfo = ctx.createOscillator();
+    bugLfo.frequency.value = 9;
+    const bugLfoGain = ctx.createGain();
+    bugLfoGain.gain.value = 0.012;
+    bugLfo.connect(bugLfoGain).connect(bugGain.gain);
+    bugOsc.connect(bugFilter).connect(bugGain).connect(master);
+    bugOsc.start();
+    bugLfo.start();
+  }
+
+  // 昼夜切换：夜晚/黄昏开启虫鸣，白天静音（平滑过渡避免爆音）。
+  function setNight(on) {
+    if (!ctx || !bugGain) return;
+    const t = ctx.currentTime;
+    bugGain.gain.setTargetAtTime(on ? 0.018 : 0, t, 0.6);
   }
 
   // 振荡器音：freq 起始频率，slide 结束频率，type 波形，vol 音量，dur 时长，delay 延迟。
@@ -38,11 +102,7 @@ export function createAudio() {
   function noise({ dur = 0.1, vol = 0.15, filter = 1000, band = false, delay = 0 }) {
     if (!ensure()) return;
     const t0 = ctx.currentTime + delay;
-    const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
-    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-
+    const buffer = makeNoiseBuffer(dur);
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     const filterNode = ctx.createBiquadFilter();
@@ -95,5 +155,5 @@ export function createAudio() {
     if (fn) fn();
   }
 
-  return { play, ensure };
+  return { play, ensure, setNight };
 }

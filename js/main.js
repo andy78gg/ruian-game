@@ -346,6 +346,8 @@ function animate() {
   let running = false;
 
   dayNight.update(dt);
+  const phaseKey = dayNight.getPhase().key;
+  audio.setNight(phaseKey === 'night' || phaseKey === 'dusk');
   survival.update(dt);
   hurtTimer = Math.max(0, hurtTimer - dt);
   el.hurt.style.opacity = hurtTimer > 0 ? (hurtTimer / 0.35) * 0.55 : 0;
