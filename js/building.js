@@ -3,7 +3,7 @@ import * as THREE from 'three';
 // 可建造构件：cost 消耗资源，size [宽,高,厚]，hp 耐久；collide 是否挡路，trap 是否为伤敌陷阱，light 是否带光源
 const PARTS = {
   wall:   { name: '墙板',     cost: { wood: 2 },          size: [2, 2.2, 0.15], hp: 6, collide: true },
-  door:   { name: '木门',     cost: { wood: 3 },          size: [1, 2, 0.12],  hp: 4, collide: false },
+  door:   { name: '木门',     cost: { wood: 3 },          size: [1, 2, 0.12],  hp: 4, collide: true },
   fence:  { name: '栅栏',     cost: { wood: 1 },          size: [2, 1.1, 0.1], hp: 4, collide: true },
   pillar: { name: '柱子',     cost: { wood: 1 },          size: [0.4, 2.6, 0.4], hp: 5, collide: true },
   floor:  { name: '地板',     cost: { wood: 2 },          size: [2, 0.15, 2],  hp: 4, collide: false },
@@ -315,7 +315,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     refreshPreview();
   }
 
-  // 供移动碰撞使用：可挡路构件的轴对齐盒体（门/地板/屋顶/陷阱留空可通行）
+  // 供移动碰撞使用：可挡路构件的轴对齐盒体（地板/屋顶/楼梯/陷阱留空可通行）
   function getColliders() {
     return placed
       .filter((p) => PARTS[p.partKey].collide)

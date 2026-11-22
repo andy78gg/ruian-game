@@ -4,7 +4,7 @@ const TRUNK_COLOR = 0x4a3320;
 const LEAF_DARK = [0x2f5a2a, 0x3a6830, 0x2a4f25];
 const LEAF_LIGHT = [0x52843e, 0x5e9248, 0x477a36];
 
-// 在地形上随机放置树木：阔叶橡树 / 尖冠松树，细树干、窄冠幅、整体高挑
+// 在地形上随机放置树木：尖塔松 / 圆团阔叶 / 扁宽伞盖 / 高瘦疏冠，细树干、窄冠幅、整体高挑
 export function buildTrees(heightAt, count = 90) {
   const group = new THREE.Group();
   const trees = [];
@@ -34,11 +34,13 @@ export function buildTrees(heightAt, count = 90) {
 
     const y = heightAt(x, z);
     const scale = 2.0 + Math.random() * 1.0; // 高挑但不粗壮
-    const pine = Math.random() < 0.45;
+    const roll = Math.random();
+    // 树型：尖塔松 / 扁宽伞盖 / 圆团阔叶 / 高瘦疏冠
+    const form = roll < 0.4 ? 'pine' : roll < 0.62 ? 'broad' : roll < 0.82 ? 'round' : 'sparse';
 
     const tree = new THREE.Group();
 
-    // 两段式细树干：下粗上细，高度保持
+    // 两段式细树干：下粗上细；上段轻微自然弯曲
     const trunkH = 2.0 * scale;
     const lower = new THREE.Mesh(
       new THREE.CylinderGeometry(0.2 * scale, 0.33 * scale, trunkH * 0.55, 7),
@@ -49,20 +51,22 @@ export function buildTrees(heightAt, count = 90) {
     lower.receiveShadow = true;
     tree.add(lower);
 
+    const bend = (Math.random() - 0.5) * 0.18;
     const upper = new THREE.Mesh(
       new THREE.CylinderGeometry(0.13 * scale, 0.2 * scale, trunkH * 0.55, 7),
       trunkMat
     );
-    upper.position.y = trunkH * 0.55 + (trunkH * 0.55) / 2;
+    upper.position.set(bend * scale * 0.3, trunkH * 0.55 + (trunkH * 0.55) / 2, 0);
+    upper.rotation.z = bend;
     upper.castShadow = true;
     upper.receiveShadow = true;
     tree.add(upper);
 
-    if (pine) {
-      // 四层逐层收窄的锥形松树，冠幅收窄
-      const layers = 4;
+    if (form === 'pine') {
+      // 尖塔松：3~5 层逐层收窄的锥形，冠幅收窄
+      const layers = 3 + Math.floor(Math.random() * 3);
       for (let l = 0; l < layers; l++) {
-        const r = (0.9 - l * 0.2) * scale;
+        const r = (0.9 - l * 0.18) * scale;
         const h = 1.1 * scale;
         const cone = new THREE.Mesh(
           new THREE.ConeGeometry(r, h, 8),
@@ -73,14 +77,31 @@ export function buildTrees(heightAt, count = 90) {
         cone.receiveShadow = true;
         tree.add(cone);
       }
+    } else if (form === 'sparse') {
+      // 高瘦疏冠：细干顶部 1~2 个小团
+      const blobs = 1 + Math.floor(Math.random() * 2);
+      for (let b = 0; b < blobs; b++) {
+        const r = (0.4 + Math.random() * 0.25) * scale;
+        const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), pick(leafLightMats));
+        blob.position.set(
+          (Math.random() - 0.5) * 0.4 * scale,
+          trunkH + (0.5 + Math.random() * 0.5) * scale,
+          (Math.random() - 0.5) * 0.4 * scale
+        );
+        blob.scale.y = 0.85;
+        blob.castShadow = true;
+        blob.receiveShadow = true;
+        tree.add(blob);
+      }
     } else {
-      // 阔叶橡树：一团主冠 + 2~3 团错落侧冠，窄冠幅
+      // 阔叶：round 圆团冠 / broad 扁宽伞盖；主冠 + 2~3 团错落侧冠
+      const broad = form === 'broad';
       const crown = new THREE.Mesh(
         new THREE.IcosahedronGeometry(0.9 * scale, 1),
         pick(leafLightMats)
       );
       crown.position.y = trunkH + 0.9 * scale;
-      crown.scale.y = 0.8;
+      crown.scale.set(broad ? 1.25 : 1, broad ? 0.7 : 0.8, broad ? 1.25 : 1);
       crown.castShadow = true;
       crown.receiveShadow = true;
       tree.add(crown);
