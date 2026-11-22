@@ -11,7 +11,7 @@ const NIGHT_TINT = new THREE.Color(0x232c4d);
 
 // 昼夜循环：驱动太阳角度、光照强度/颜色、天空穹顶与雾色、星星显隐
 export function createDayNight({ scene, sun, hemi }) {
-  let t = 0.25; // 0=日出 0.25=正午 0.5=日落 0.75=午夜
+  let t = 0.15; // 0=日出 0.25=正午 0.5=日落 0.75=午夜
 
   const stars = buildStars();
   scene.add(stars);
@@ -45,8 +45,8 @@ export function createDayNight({ scene, sun, hemi }) {
     const horizon = new THREE.Color(0xd6e8f3);
     const c = new THREE.Color();
     for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) / 220;
-      c.lerpColors(horizon, top, THREE.MathUtils.clamp(y, 0, 1));
+      const y = THREE.MathUtils.clamp(pos.getY(i) / 220, 0, 1);
+      c.lerpColors(horizon, top, y);
       colors.push(c.r, c.g, c.b);
     }
     geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
