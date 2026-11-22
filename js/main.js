@@ -6,6 +6,7 @@ import { buildBerries } from './berries.js';
 import { buildScatter } from './scatter.js';
 import { buildMountains } from './mountains.js';
 import { buildWater } from './water.js';
+import { buildFlowers } from './flowers.js';
 import { createDayNight } from './daynight.js';
 import { createSurvival } from './survival.js';
 import { ITEMS } from './items.js';
@@ -88,6 +89,7 @@ scene.add(buildScatter(heightAt));
 scene.add(buildMountains(heightAt));
 const water = buildWater(heightAt);
 scene.add(water.group);
+scene.add(buildFlowers(heightAt));
 
 // ---------- 昼夜循环 / 生存数值 ----------
 const dayNight = createDayNight({ scene, sun, hemi });
