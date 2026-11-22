@@ -103,6 +103,7 @@ const hotbar = createHotbar(ITEMS);
 const held = createHeld(camera);
 hotbar.onChange = (item) => held.setItem(item);
 held.setItem(ITEMS[0]);
+window.__dbg = { scene, camera, held };
 
 // ---------- 背包 / 采集 ----------
 const particles = createParticles(scene);
@@ -238,7 +239,7 @@ function resolveCollisions() {
     }
   }
 
-  // 墙板（门位留空可通行）
+  // 墙体 / 门 / 栅栏等实体构件 AABB 阻挡
   for (const c of building.getColliders()) {
     const [w, , th] = c.size;
     const rotated = Math.abs(Math.sin(c.rot)) > 0.5;
