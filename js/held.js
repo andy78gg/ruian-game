@@ -110,15 +110,15 @@ function buildModel(type) {
   return g;
 }
 
-// 不同手持物的基础前倾角：工具头朝向前方世界（相机 -z），柄尾收向手；盾平持正对镜头。
+// 不同手持物的基础前倾角：工具柄朝前伸（相机 -z），柄尾收向手；盾平持正对镜头。
 const TILT = {
-  pickaxe: -0.85,
-  axe: -0.85,
-  spear: -1.25,
+  pickaxe: -1.15,
+  axe: -1.15,
+  spear: -1.35,
   shield: 0,
-  food: -0.5,
-  berry: -0.5,
-  default: -0.85,
+  food: -0.7,
+  berry: -0.7,
+  default: -1.15,
 };
 
 // 方块风第一人称手臂：手掌包住柄尾，小臂与袖口斜伸向画面底边；与工具挂在同一 grip 下，随前倾一起动。
@@ -136,7 +136,7 @@ function buildArm() {
 // 手持物：挂在相机右下，切换物品时替换模型，左键触发挥砍动画。
 export function createHeld(camera) {
   const holder = new THREE.Group();
-  holder.position.set(0.34, -0.3, -0.55);
+  holder.position.set(0.3, -0.28, -0.55);
   camera.add(holder);
 
   // grip 承载基础前倾姿态；手臂与工具都挂在 grip 下，保证手握柄不脱节。
@@ -158,7 +158,8 @@ export function createHeld(camera) {
     // 把模型握把处抬到 grip 原点（手掌位置），柄尾落在掌心
     current.position.y = 0.18;
     grip.rotation.x = TILT[item.model] ?? TILT.default;
-    grip.rotation.z = 0.08;
+    grip.rotation.y = -0.1;
+    grip.rotation.z = 0.06;
     grip.add(current);
   }
 
@@ -180,8 +181,8 @@ export function createHeld(camera) {
       const arc = Math.sin(k * Math.PI); // 0 → 1 → 0
       holder.rotation.x = -arc * 0.65;
       holder.rotation.z = Math.sin(k * Math.PI * 2) * 0.05;
-      holder.position.x = 0.34;
-      holder.position.y = -0.3 - arc * 0.06;
+      holder.position.x = 0.3;
+      holder.position.y = -0.28 - arc * 0.06;
       return;
     }
 
@@ -198,8 +199,8 @@ export function createHeld(camera) {
     const walkRz = Math.sin(walkPhase) * 0.04;
     const walkRx = -Math.cos(walkPhase) * 0.03;
 
-    holder.position.x = 0.34 + walkX * moveBlend;
-    holder.position.y = -0.3 + breathY - walkY * moveBlend;
+    holder.position.x = 0.3 + walkX * moveBlend;
+    holder.position.y = -0.28 + breathY - walkY * moveBlend;
     holder.rotation.x = walkRx * moveBlend;
     holder.rotation.z = breathRz + walkRz * moveBlend;
   }
