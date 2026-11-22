@@ -1,23 +1,23 @@
 import * as THREE from 'three';
-import { buildTerrain } from './terrain.js?v=13';
-import { buildTrees, buildGrass } from './trees.js?v=13';
-import { buildRocks } from './rocks.js?v=13';
-import { buildBerries } from './berries.js?v=13';
-import { buildScatter } from './scatter.js?v=13';
-import { buildMountains } from './mountains.js?v=13';
-import { buildWater } from './water.js?v=13';
-import { buildFlowers } from './flowers.js?v=13';
-import { createDayNight } from './daynight.js?v=13';
-import { createSurvival } from './survival.js?v=13';
-import { ITEMS } from './items.js?v=13';
-import { createHotbar } from './hotbar.js?v=13';
-import { createHeld } from './held.js?v=13';
-import { createInventory } from './inventory.js?v=13';
-import { createGather } from './gather.js?v=13';
-import { createBuilding } from './building.js?v=13';
-import { createEnemies } from './enemies.js?v=13';
-import { createParticles } from './particles.js?v=13';
-import { createAudio } from './audio.js?v=13';
+import { buildTerrain } from './terrain.js?v=14';
+import { buildTrees, buildGrass } from './trees.js?v=14';
+import { buildRocks } from './rocks.js?v=14';
+import { buildBerries } from './berries.js?v=14';
+import { buildScatter } from './scatter.js?v=14';
+import { buildMountains } from './mountains.js?v=14';
+import { buildWater } from './water.js?v=14';
+import { buildFlowers } from './flowers.js?v=14';
+import { createDayNight } from './daynight.js?v=14';
+import { createSurvival } from './survival.js?v=14';
+import { ITEMS } from './items.js?v=14';
+import { createHotbar } from './hotbar.js?v=14';
+import { createHeld } from './held.js?v=14';
+import { createInventory } from './inventory.js?v=14';
+import { createGather } from './gather.js?v=14';
+import { createBuilding } from './building.js?v=14';
+import { createEnemies } from './enemies.js?v=14';
+import { createParticles } from './particles.js?v=14';
+import { createAudio } from './audio.js?v=14';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -166,7 +166,7 @@ function updateHUD() {
 
   const hint = document.getElementById('build-hint');
   if (building.buildMode) {
-    hint.textContent = `建造：${building.partName} · Q/E 或滚轮切换 · 左键放置 · 右键拆除`;
+    hint.textContent = `建造：${building.partName} · Q 或滚轮切换 · 左键放置 · 右键拆除`;
     hint.classList.add('show');
   } else {
     hint.classList.remove('show');
@@ -288,6 +288,12 @@ function respawn() {
 }
 addEventListener('keydown', (e) => {
   audio.ensure();
+  if (e.code === 'KeyE') {
+    inventory.toggle(hotbar.state.items);
+    return;
+  }
+  // 背包打开时屏蔽移动、切槽、建造、进食等其余按键
+  if (inventory.isOpen) return;
   keys[e.code] = true;
   if (e.code === 'Space') e.preventDefault();
   if (e.code.startsWith('Digit')) {
@@ -296,7 +302,6 @@ addEventListener('keydown', (e) => {
   }
   if (e.code === 'KeyB') building.toggle();
   if (e.code === 'KeyQ') building.cycle(-1);
-  if (e.code === 'KeyE') building.cycle(1);
   if (e.code === 'KeyF') tryEat();
 });
 addEventListener('keyup', (e) => (keys[e.code] = false));
@@ -372,17 +377,20 @@ function animate() {
   }
 
   if (!dead) {
-  running = keys['ShiftLeft'] || keys['ShiftRight'];
+  const invOpen = inventory.isOpen;
+  running = !invOpen && (keys['ShiftLeft'] || keys['ShiftRight']);
   const inWater = water.isInWater(player.x, player.z);
   const speed = (running ? 9 : 5) * (inWater ? 0.6 : 1);
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new THREE.Vector3(-forward.z, 0, forward.x);
   const move = new THREE.Vector3();
 
-  if (keys['KeyW']) move.add(forward);
-  if (keys['KeyS']) move.sub(forward);
-  if (keys['KeyD']) move.add(right);
-  if (keys['KeyA']) move.sub(right);
+  if (!invOpen) {
+    if (keys['KeyW']) move.add(forward);
+    if (keys['KeyS']) move.sub(forward);
+    if (keys['KeyD']) move.add(right);
+    if (keys['KeyA']) move.sub(right);
+  }
 
   moving = move.lengthSq() > 0;
 
