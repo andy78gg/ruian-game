@@ -121,6 +121,17 @@ const TILT = {
   default: -1.15,
 };
 
+// 绕握柄轴（局部 y）的滚转：镐/斧的工作面原本朝左右(x)，转 90° 让头部朝前(-z)对准星。
+const ROLL = {
+  pickaxe: Math.PI / 2,
+  axe: Math.PI / 2,
+  spear: 0,
+  shield: 0,
+  food: 0,
+  berry: 0,
+  default: 0,
+};
+
 // 方块风第一人称手臂：手掌包住柄尾，小臂与袖口斜伸向画面底边；与工具挂在同一 grip 下，随前倾一起动。
 function buildArm() {
   const g = new THREE.Group();
@@ -157,6 +168,7 @@ export function createHeld(camera) {
     current = buildModel(item.model);
     // 把模型握把处抬到 grip 原点（手掌位置），柄尾落在掌心
     current.position.y = 0.18;
+    current.rotation.y = ROLL[item.model] ?? ROLL.default;
     grip.rotation.x = TILT[item.model] ?? TILT.default;
     grip.rotation.y = -0.18;
     grip.rotation.z = 0.06;
