@@ -34,6 +34,7 @@ export function createEnemies({
   building,
   inventory,
   particles,
+  onSound,
 }) {
   const group = new THREE.Group();
   scene.add(group);
@@ -220,6 +221,7 @@ export function createEnemies({
     particles.burst(p, { color: 0xb02a2a, count: 14, size: 0.05, speed: 2.0, gravity: 8, life: 0.6 });
     inventory.add('wood', 1);
     inventory.add('stone', 1);
+    if (onSound) onSound('pickup');
     onTip('击败了敌人：木材 +1，石头 +1');
   }
 
@@ -355,6 +357,7 @@ export function createEnemies({
         e.z += (kz / kd) * KNOCKBACK;
         if (e.hp <= 0) killEnemy(e);
         else {
+          if (onSound) onSound('chop');
           onTip(`敌人受击（-${dmg}），剩余 ${e.hp}`);
         }
         return true;
