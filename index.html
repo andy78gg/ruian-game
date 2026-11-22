@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ruian Game · 地形原型</title>
-  <link rel="stylesheet" href="css/style.css?v=14" />
+  <link rel="stylesheet" href="css/style.css?v=15" />
   <script type="importmap">
     {
       "imports": {
@@ -46,10 +46,20 @@
 
   <div id="inventory-panel">
     <div class="inv-title">背包 <span class="inv-hint">按 E 关闭</span></div>
-    <div class="inv-section">资源</div>
-    <div class="inv-grid" id="inv-resources"></div>
-    <div class="inv-section">物品</div>
-    <div class="inv-grid" id="inv-items"></div>
+    <div class="inv-tabs">
+      <button class="inv-tab active" data-pane="bag">背包</button>
+      <button class="inv-tab" data-pane="craft">制作</button>
+    </div>
+    <div class="inv-pane active" id="pane-bag">
+      <div class="inv-section">资源</div>
+      <div class="inv-grid" id="inv-resources"></div>
+      <div class="inv-section">物品</div>
+      <div class="inv-grid" id="inv-items"></div>
+    </div>
+    <div class="inv-pane" id="pane-craft">
+      <div class="inv-section">配方（消耗木材 / 石头合成工具）</div>
+      <div id="inv-recipes"></div>
+    </div>
   </div>
 
   <div id="crosshair"></div>
@@ -61,6 +71,6 @@
     <div class="death-sub">正在重生…</div>
   </div>
 
-  <script type="module" src="js/main.js?v=14"></script>
+  <script type="module" src="js/main.js?v=15"></script>
 </body>
 </html>
