@@ -136,7 +136,7 @@ function buildArm() {
 // 手持物：挂在相机右下，切换物品时替换模型，左键触发挥砍动画。
 export function createHeld(camera) {
   const holder = new THREE.Group();
-  holder.position.set(0.3, -0.28, -0.55);
+  holder.position.set(0.24, -0.28, -0.55);
   camera.add(holder);
 
   // grip 承载基础前倾姿态；手臂与工具都挂在 grip 下，保证手握柄不脱节。
@@ -158,7 +158,7 @@ export function createHeld(camera) {
     // 把模型握把处抬到 grip 原点（手掌位置），柄尾落在掌心
     current.position.y = 0.18;
     grip.rotation.x = TILT[item.model] ?? TILT.default;
-    grip.rotation.y = -0.1;
+    grip.rotation.y = -0.18;
     grip.rotation.z = 0.06;
     grip.add(current);
   }
@@ -181,7 +181,7 @@ export function createHeld(camera) {
       const arc = Math.sin(k * Math.PI); // 0 → 1 → 0
       holder.rotation.x = -arc * 0.65;
       holder.rotation.z = Math.sin(k * Math.PI * 2) * 0.05;
-      holder.position.x = 0.3;
+      holder.position.x = 0.24;
       holder.position.y = -0.28 - arc * 0.06;
       return;
     }
@@ -199,7 +199,7 @@ export function createHeld(camera) {
     const walkRz = Math.sin(walkPhase) * 0.04;
     const walkRx = -Math.cos(walkPhase) * 0.03;
 
-    holder.position.x = 0.3 + walkX * moveBlend;
+    holder.position.x = 0.24 + walkX * moveBlend;
     holder.position.y = -0.28 + breathY - walkY * moveBlend;
     holder.rotation.x = walkRx * moveBlend;
     holder.rotation.z = breathRz + walkRz * moveBlend;
