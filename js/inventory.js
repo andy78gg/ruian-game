@@ -2,8 +2,8 @@
 // 物品栏为独立 4 排 × 9 格定长槽位（36 格），与底部快捷栏（9 格）分离，互不重复。
 // 两组槽位均支持 MC 式左键拖拽：空位移动、同类堆叠合并、异类交换，跨区亦可。
 // 配方分两级：随身合成（hand）与工作台合成（workbench，需先拥有工作台）。
-import { ICONS } from './icons.js?v=20';
-import { ITEM_META } from './items.js?v=20';
+import { ICONS } from './icons.js?v=21';
+import { ITEM_META } from './items.js?v=21';
 
 export function createInventory({ hotbar } = {}) {
   const state = { wood: 0, stone: 0 };
