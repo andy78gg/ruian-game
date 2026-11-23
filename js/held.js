@@ -4,8 +4,7 @@ const MAT = {
   wood: new THREE.MeshStandardMaterial({ color: 0x8a5a33, flatShading: false, roughness: 0.9 }),
   woodDark: new THREE.MeshStandardMaterial({ color: 0x6b4426, flatShading: false, roughness: 0.95 }),
   metal: new THREE.MeshStandardMaterial({ color: 0x9aa2ad, flatShading: false, roughness: 0.45, metalness: 0.5 }),
-  metalDark: new THREE.MeshStandardMaterial({ color: 0x878f98, flatShading: false, roughness: 0.5, metalness: 0.55 }),
-  metalEdge: new THREE.MeshStandardMaterial({ color: 0xd9e1e8, flatShading: false, roughness: 0.28, metalness: 0.6 }),
+  metalBright: new THREE.MeshStandardMaterial({ color: 0xc8d0d8, flatShading: false, roughness: 0.35, metalness: 0.55 }),
   stone: new THREE.MeshStandardMaterial({ color: 0x8d8d8d, flatShading: false, roughness: 0.9 }),
   food: new THREE.MeshStandardMaterial({ color: 0xe8b339, flatShading: false, roughness: 0.8 }),
   leaf: new THREE.MeshStandardMaterial({ color: 0x4c8a3a, flatShading: false, roughness: 1 }),
@@ -18,36 +17,6 @@ function mesh(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
   m.position.set(x, y, z);
   m.rotation.set(rx, ry, rz);
   return m;
-}
-
-// 斧头：木柄 + 握环 + 斧眼箍 + 弧形宽刃斧身（侧视轮廓拉伸）+ 磨亮刃口。
-// handleMat/bodyMat/edgeMat 可换，以区分木斧与钢斧。
-function buildAxe(handleMat, bodyMat, edgeMat) {
-  const g = new THREE.Group();
-  const handle = mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.62, 10), handleMat, 0, 0, 0);
-  const grip1 = mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.05, 8), MAT.woodDark, 0, -0.22, 0);
-  const grip2 = mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.05, 8), MAT.woodDark, 0, -0.14, 0);
-  const collar = mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.05, 10), bodyMat, 0, 0.26, 0);
-  // 斧眼：套住柄的金属箍
-  const eye = mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.1, 10), bodyMat, 0, 0.28, 0);
-
-  // 侧视斧形轮廓：后侧窄背，前侧上下张开成弧的宽刃
-  const s = new THREE.Shape();
-  s.moveTo(-0.055, 0.05);
-  s.lineTo(-0.055, -0.05);
-  s.lineTo(-0.01, -0.075);
-  s.quadraticCurveTo(0.09, -0.095, 0.13, -0.02);
-  s.quadraticCurveTo(0.145, 0, 0.13, 0.02);
-  s.quadraticCurveTo(0.09, 0.095, -0.01, 0.075);
-  s.lineTo(-0.055, 0.05);
-  const headGeo = new THREE.ExtrudeGeometry(s, { depth: 0.04, bevelEnabled: false });
-  headGeo.translate(0, 0.28, -0.02);
-  const head = new THREE.Mesh(headGeo, bodyMat);
-  // 磨亮的刃口边
-  const edge = mesh(new THREE.BoxGeometry(0.02, 0.15, 0.042), edgeMat, 0.128, 0.28, 0);
-
-  g.add(handle, grip1, grip2, collar, eye, head, edge);
-  return g;
 }
 
 // 用基础几何体拼装立体手持模型：握把、金属箍、刃部/倒刺、盾脐铆钉等多部件组合。
@@ -68,14 +37,25 @@ function buildModel(type) {
       break;
     }
     case 'axe': {
-      const a = buildAxe(MAT.wood, MAT.metalDark, MAT.metalEdge);
-      a.children.forEach((c) => g.add(c));
+      // 木柄 + 金属箍 + 斧眼 + 斧背 + 宽斧刃
+      const handle = mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.62, 8), MAT.wood, 0, 0, 0);
+      const collar = mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.05, 8), MAT.metal, 0, 0.25, 0);
+      const eye = mesh(new THREE.BoxGeometry(0.07, 0.1, 0.07), MAT.metal, 0, 0.28, 0);
+      const back = mesh(new THREE.BoxGeometry(0.05, 0.18, 0.06), MAT.metal, -0.045, 0.28, 0);
+      const blade = mesh(new THREE.BoxGeometry(0.15, 0.17, 0.04), MAT.metal, 0.09, 0.28, 0, 0, 0, 0.08);
+      const edge = mesh(new THREE.BoxGeometry(0.04, 0.19, 0.02), MAT.metal, 0.17, 0.28, 0, 0, 0, 0.08);
+      g.add(handle, collar, eye, back, blade, edge);
       break;
     }
     case 'steelAxe': {
-      // 钢斧：深木柄，斧身更亮，刃口抛光
-      const a = buildAxe(MAT.woodDark, MAT.metal, MAT.metalEdge);
-      a.children.forEach((c) => g.add(c));
+      // 钢斧：深木柄，亮金属斧身与刃口
+      const handle = mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.62, 8), MAT.woodDark, 0, 0, 0);
+      const collar = mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.05, 8), MAT.metalBright, 0, 0.25, 0);
+      const eye = mesh(new THREE.BoxGeometry(0.07, 0.1, 0.07), MAT.metalBright, 0, 0.28, 0);
+      const back = mesh(new THREE.BoxGeometry(0.05, 0.18, 0.06), MAT.metalBright, -0.045, 0.28, 0);
+      const blade = mesh(new THREE.BoxGeometry(0.15, 0.17, 0.04), MAT.metalBright, 0.09, 0.28, 0, 0, 0, 0.08);
+      const edge = mesh(new THREE.BoxGeometry(0.04, 0.19, 0.02), MAT.metalBright, 0.17, 0.28, 0, 0, 0, 0.08);
+      g.add(handle, collar, eye, back, blade, edge);
       break;
     }
     case 'spear': {
