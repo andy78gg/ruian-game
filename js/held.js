@@ -175,7 +175,8 @@ export function createHeld(camera) {
   let moveBlend = 0;      // 静止↔移动平滑过渡 0..1
 
   function setItem(item) {
-    if (current) grip.remove(current);
+    if (current) { grip.remove(current); current = null; }
+    if (!item) return;
     current = buildModel(item.model);
     // 把模型握把处抬到 grip 原点（手掌位置），柄尾落在掌心
     current.position.y = 0.18;
