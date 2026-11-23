@@ -20,12 +20,10 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
   }
 
   function tryHit() {
-    const item = hotbar.state.items[hotbar.state.selected];
+    const item = hotbar.getItem(hotbar.state.selected);
     ray.setFromCamera(center, camera);
     ray.far = REACH;
 
-    // 收集所有射线相交的目标，按交点到相机的距离排序，取最近的一个；
-    // 避免先遍历到的树/灌木宽包围盒把更近的石头挡住。
     const hits = [];
     const pt = new THREE.Vector3();
 
@@ -46,7 +44,7 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
     const { resource, obj } = hits[0];
 
     if (resource === 'wood') {
-      if (item.id !== 'axe') {
+      if (!item || item.id !== 'axe') {
         onTip('砍树需要斧头');
         return;
       }
@@ -60,7 +58,7 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
     }
 
     if (resource === 'stone') {
-      if (item.id !== 'pickaxe') {
+      if (!item || item.id !== 'pickaxe') {
         onTip('挖矿需要镐');
         return;
       }
@@ -73,7 +71,6 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
       return;
     }
 
-    // 浆果灌木
     if (obj.berries <= 0) {
       onTip('浆果还没长出来');
       return;
@@ -83,7 +80,7 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
     p.y += 0.5;
     particles.burst(p, { color: 0x4c8a3a, count: 4, size: 0.035, speed: 1.2, gravity: 6, life: 0.45 });
     particles.burst(p, { color: 0xc23b3e, count: 3, size: 0.04, speed: 1.4, gravity: 7, life: 0.5 });
-    const food = hotbar.state.items.find((i) => i.model === 'food' || i.model === 'berry');
+    const food = hotbar.findSlot((i) => i.model === 'food' || i.model === 'berry');
     if (food) {
       food.count += 1;
       hotbar.refresh();
