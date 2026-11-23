@@ -1,23 +1,22 @@
 import * as THREE from 'three';
-import { buildTerrain } from './terrain.js?v=19';
-import { buildTrees, buildGrass } from './trees.js?v=19';
-import { buildRocks } from './rocks.js?v=19';
-import { buildBerries } from './berries.js?v=19';
-import { buildScatter } from './scatter.js?v=19';
-import { buildMountains } from './mountains.js?v=19';
-import { buildWater } from './water.js?v=19';
-import { buildFlowers } from './flowers.js?v=19';
-import { createDayNight } from './daynight.js?v=19';
-import { createSurvival } from './survival.js?v=19';
-import { ITEMS } from './items.js?v=19';
-import { createHotbar } from './hotbar.js?v=19';
-import { createHeld } from './held.js?v=19';
-import { createInventory } from './inventory.js?v=19';
-import { createGather } from './gather.js?v=19';
-import { createBuilding } from './building.js?v=19';
-import { createEnemies } from './enemies.js?v=19';
-import { createParticles } from './particles.js?v=19';
-import { createAudio } from './audio.js?v=19';
+import { buildTerrain } from './terrain.js?v=20';
+import { buildTrees, buildGrass } from './trees.js?v=20';
+import { buildRocks } from './rocks.js?v=20';
+import { buildBerries } from './berries.js?v=20';
+import { buildScatter } from './scatter.js?v=20';
+import { buildMountains } from './mountains.js?v=20';
+import { buildWater } from './water.js?v=20';
+import { buildFlowers } from './flowers.js?v=20';
+import { createDayNight } from './daynight.js?v=20';
+import { createSurvival } from './survival.js?v=20';
+import { createHotbar } from './hotbar.js?v=20';
+import { createHeld } from './held.js?v=20';
+import { createInventory } from './inventory.js?v=20';
+import { createGather } from './gather.js?v=20';
+import { createBuilding } from './building.js?v=20';
+import { createEnemies } from './enemies.js?v=20';
+import { createParticles } from './particles.js?v=20';
+import { createAudio } from './audio.js?v=20';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -99,10 +98,10 @@ let hurtTimer = 0;
 survival.setOnHurt(() => { hurtTimer = 0.35; audio.play('hurt'); });
 
 // ---------- 快捷栏 / 手持物 ----------
-const hotbar = createHotbar(ITEMS);
+const hotbar = createHotbar();
 const held = createHeld(camera);
 hotbar.onChange = (item) => held.setItem(item);
-held.setItem(ITEMS[0]);
+held.setItem(hotbar.getItem(0));
 
 // ---------- 背包 / 采集 ----------
 const particles = createParticles(scene);
@@ -139,8 +138,8 @@ function showTip(text) {
 }
 
 function tryEat() {
-  const item = hotbar.state.items[hotbar.state.selected];
-  if (item.model !== 'food' && item.model !== 'berry') return;
+  const item = hotbar.getItem(hotbar.state.selected);
+  if (!item || (item.model !== 'food' && item.model !== 'berry')) return;
   if (item.count <= 0) {
     showTip('没有食物了');
     return;
@@ -298,7 +297,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Space') e.preventDefault();
   if (e.code.startsWith('Digit')) {
     const n = Number(e.code.slice(5));
-    if (n >= 1 && n <= ITEMS.length) hotbar.select(n - 1);
+    if (n >= 1 && n <= hotbar.size) hotbar.select(n - 1);
   }
   if (e.code === 'KeyB') building.toggle();
   if (e.code === 'KeyQ') building.cycle(-1);
@@ -319,7 +318,7 @@ canvas.addEventListener('mousedown', (e) => {
     held.triggerSwing();
     audio.play('swing');
     if (building.buildMode) building.place(player);
-    else if (!enemies.tryHit(camera, hotbar.state.items[hotbar.state.selected])) gather.tryHit();
+    else if (!enemies.tryHit(camera, hotbar.getItem(hotbar.state.selected))) gather.tryHit();
   } else if (e.button === 2) {
     if (building.buildMode) building.removeAt(camera);
     else tryEat();
