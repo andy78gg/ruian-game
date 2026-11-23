@@ -1,5 +1,6 @@
 // 资源背包：木材、石头计数；按 E 开合面板，含「背包」与「制作」两个标签。
 // 物品栏为独立背包库存（4 排 × 9 格），与底部快捷栏分离，互不重复。
+// 配方分两级：随身合成（hand）与工作台合成（workbench，需先拥有工作台）。
 export function createInventory({ hotbar } = {}) {
   const state = { wood: 0, stone: 0 };
   const elWood = document.getElementById('wood-count');
@@ -22,17 +23,33 @@ export function createInventory({ hotbar } = {}) {
   const STASH_ROWS = 4;
   const STASH_TOTAL = STASH_COLS * STASH_ROWS; // 36 格
 
-  // 配方：out 对应热栏物品 id，cost 为消耗原料。
+  // 配方：out 对应热栏物品 id，cost 为消耗原料，station 为制作台要求。
+  // station: 'hand' 随身可做；'workbench' 必须先拥有工作台。
   const RECIPES = [
-    { out: 'spear',       cost: { wood: 2 } },
-    { out: 'axe',         cost: { wood: 1, stone: 2 } },
-    { out: 'pickaxe',     cost: { wood: 1, stone: 2 } },
-    { out: 'shield',      cost: { wood: 3, stone: 1 } },
-    { out: 'stoneSpear',  cost: { wood: 1, stone: 3 } },
+    // —— 随身合成 ——
+    { out: 'spear',      station: 'hand',      cost: { wood: 2 } },
+    { out: 'axe',        station: 'hand',      cost: { wood: 1, stone: 2 } },
+    { out: 'pickaxe',    station: 'hand',      cost: { wood: 1, stone: 2 } },
+    { out: 'shield',     station: 'hand',      cost: { wood: 3, stone: 1 } },
+    { out: 'stoneSpear', station: 'hand',      cost: { wood: 1, stone: 3 } },
+    { out: 'torch',      station: 'hand',      cost: { wood: 2, stone: 1 } },
+    { out: 'workbench',  station: 'hand',      cost: { wood: 4 } },
+    // —— 工作台合成 ——
+    { out: 'sword',      station: 'workbench',  cost: { wood: 2, stone: 4 } },
+    { out: 'steelAxe',   station: 'workbench',  cost: { wood: 2, stone: 4 } },
+    { out: 'steelPick',  station: 'workbench',  cost: { wood: 2, stone: 4 } },
+    { out: 'bed',        station: 'workbench',  cost: { wood: 3, stone: 2 } },
+    { out: 'chest',       station: 'workbench',  cost: { wood: 5 } },
   ];
 
   function itemById(id) {
     return hotbar ? hotbar.state.items.find((i) => i.id === id) : null;
+  }
+
+  // 是否拥有工作台（工作台在快捷栏持有且数量 > 0）
+  function hasWorkbench() {
+    const w = itemById('workbench');
+    return !!w && w.count > 0;
   }
 
   // 单个 MC 风格槽位
@@ -103,24 +120,40 @@ export function createInventory({ hotbar } = {}) {
   }
 
   function canCraft(recipe) {
+    // 工作台配方需要先拥有工作台
+    if (recipe.station === 'workbench' && !hasWorkbench()) return false;
     return Object.entries(recipe.cost).every(([k, v]) => state[k] >= v);
   }
 
-  function renderRecipes() {
-    if (!recipeList) return;
-    recipeList.innerHTML = RECIPES.map((r) => {
-      const it = itemById(r.out);
-      const icon = it ? it.icon : '❔';
-      const name = it ? it.name : r.out;
-      const ok = canCraft(r);
-      return `
+  function recipeRow(r) {
+    const it = itemById(r.out);
+    const icon = it ? it.icon : '❔';
+    const name = it ? it.name : r.out;
+    const ok = canCraft(r);
+    const lockedStation = r.station === 'workbench' && !hasWorkbench();
+    return `
       <div class="mc-recipe${ok ? '' : ' locked'}">
         <div class="mc-mats">${costSlots(r.cost)}</div>
         <div class="mc-arrow">→</div>
         ${slot(icon, name, 1, { small: true, disabled: !ok })}
-        <button class="mc-craft" data-out="${r.out}" ${ok ? '' : 'disabled'}>合成</button>
+        <button class="mc-craft" data-out="${r.out}" ${ok ? '' : 'disabled'}>
+          ${lockedStation ? '需工作台' : '合成'}
+        </button>
       </div>`;
-    }).join('');
+  }
+
+  function renderRecipes() {
+    if (!recipeList) return;
+    const unlocked = hasWorkbench();
+    const hand = RECIPES.filter((r) => r.station !== 'workbench');
+    const bench = RECIPES.filter((r) => r.station === 'workbench');
+
+    recipeList.innerHTML = `
+      <div class="mc-group">随身合成</div>
+      ${hand.map(recipeRow).join('')}
+      <div class="mc-group${unlocked ? '' : ' locked'}">工作台合成${unlocked ? '' : ' · 需先制作工作台 🛠'}</div>
+      ${bench.map(recipeRow).join('')}
+    `;
 
     recipeList.querySelectorAll('.mc-craft').forEach((btn) => {
       btn.addEventListener('click', () => craft(btn.dataset.out));

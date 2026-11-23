@@ -19,7 +19,7 @@ const WAVE_INTERVAL = 8;     // 补怪间隔（秒）
 const STRUCTURE_RANGE = 1.3; // 敌人可拆墙/门的距离
 const STRUCTURE_DAMAGE = 1;  // 每次拆构件的耐久伤害
 // 武器伤害区分：斧 / 长矛 / 石矛 两下破甲，其余一下
-const DAMAGE_BY_TOOL = { axe: 2, spear: 2, stoneSpear: 2, pickaxe: 1 };
+const DAMAGE_BY_TOOL = { axe: 2, spear: 2, stoneSpear: 2, pickaxe: 1, sword: 3, steelAxe: 3, steelPick: 2 };
 
 // 敌人 AI：黄昏/夜晚追击玩家并近身攻击，白天缓慢游荡；左键可击打，击败掉落资源。
 export function createEnemies({
