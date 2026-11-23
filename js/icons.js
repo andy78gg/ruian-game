@@ -24,10 +24,11 @@ export const ICONS = {
     <rect x="10.4" y="5.4" width="3.4" height="1.6" rx="0.6" fill="#7a828a"/>`),
 
   axe: wrap(`
-    <rect x="10.5" y="5" width="2.2" height="16" rx="1" fill="#8a5a33"/>
-    <path d="M12 6 L18 7 L18 13 L12 12 Z" fill="#b8c0c8"/>
-    <path d="M18 7 L20.2 10 L18 13 Z" fill="#8a929a"/>
-    <path d="M12 6 L13.5 6.5 L13.5 12.5 L12 12 Z" fill="#d4dbe2"/>`),
+    <rect x="10.6" y="4.5" width="2.2" height="17" rx="1" fill="#8a5a33"/>
+    <path d="M12 6.5 Q15.5 5.8 18.5 7.5 Q19.6 10 18.5 12.5 Q15.5 14.2 12 11.5 Z" fill="#b8c0c8"/>
+    <path d="M12 6.5 L10.6 7.2 L10.6 10.8 L12 11.5 Z" fill="#7a828a"/>
+    <path d="M18.5 7.5 Q19.6 10 18.5 12.5 L17.4 11.6 Q18.2 10 17.4 8.4 Z" fill="#d4dbe2"/>
+    <path d="M12 6.5 L13.4 6.8 L13.4 11.2 L12 11.5 Z" fill="#8a929a"/>`),
 
   spear: wrap(`
     <rect x="11.2" y="6" width="1.8" height="15" rx="0.8" fill="#8a5a33"/>
@@ -82,10 +83,11 @@ export const ICONS = {
     <rect x="11" y="17" width="2" height="3" fill="#6b4426"/>`),
 
   steelAxe: wrap(`
-    <rect x="10.5" y="5" width="2.2" height="16" rx="1" fill="#6b4426"/>
-    <path d="M12 5.5 L18.5 6.5 L18.5 13.5 L12 12.5 Z" fill="#d4dbe2"/>
-    <path d="M18.5 6.5 L20.5 10 L18.5 13.5 Z" fill="#a9b2ba"/>
-    <path d="M12 5.5 L13.6 6 L13.6 13 L12 12.5 Z" fill="#ffffff"/>`),
+    <rect x="10.6" y="4.5" width="2.2" height="17" rx="1" fill="#6b4426"/>
+    <path d="M12 6.5 Q15.5 5.8 18.5 7.5 Q19.6 10 18.5 12.5 Q15.5 14.2 12 11.5 Z" fill="#d4dbe2"/>
+    <path d="M12 6.5 L10.6 7.2 L10.6 10.8 L12 11.5 Z" fill="#a9b2ba"/>
+    <path d="M18.5 7.5 Q19.6 10 18.5 12.5 L17.4 11.6 Q18.2 10 17.4 8.4 Z" fill="#ffffff"/>
+    <path d="M12 6.5 L13.4 6.8 L13.4 11.2 L12 11.5 Z" fill="#bcc6ce"/>`),
 
   steelPick: wrap(`
     <rect x="11" y="6" width="2.2" height="15" rx="1" fill="#6b4426"/>
