@@ -12,7 +12,7 @@ export const ITEMS = [
   { id: 'torch',     name: '火把',   icon: '🔥', model: 'torch',    count: 0 },
   { id: 'workbench', name: '工作台', icon: '🛠', model: 'workbench', count: 0 },
   { id: 'sword',     name: '铁剑',   icon: '⚔', model: 'spear',    count: 0 },
-  { id: 'steelAxe',  name: '钢斧',   icon: '⚒', model: 'axe',       count: 0 },
+  { id: 'steelAxe',  name: '钢斧',   icon: '⚒', model: 'steelAxe', count: 0 },
   { id: 'steelPick', name: '钢镐',   icon: '🔨', model: 'pickaxe',  count: 0 },
   { id: 'bed',       name: '木床',   icon: '🛏', model: 'shield',   count: 0 },
   { id: 'chest',     name: '储物箱', icon: '📦', model: 'shield',   count: 0 },
