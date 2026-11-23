@@ -65,6 +65,7 @@ canvas { display: block; }
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: nowrap;
   gap: 6px;
   pointer-events: none;
   user-select: none;
@@ -85,6 +86,7 @@ canvas { display: block; }
 }
 
 .slot.active { border-color: #ffd34d; background: rgba(0, 0, 0, 0.6); }
+.slot.empty { background: rgba(0, 0, 0, 0.25); border-color: rgba(255, 255, 255, 0.12); }
 .slot .key { position: absolute; top: 2px; left: 5px; font-size: 10px; color: rgba(255, 255, 255, 0.7); }
 .slot .count { position: absolute; bottom: 2px; right: 5px; font-size: 12px; color: #fff; }
 
@@ -353,3 +355,21 @@ canvas { display: block; }
 .mc-craft:hover:not(:disabled) { background: #8a8a8a; }
 .mc-craft:disabled { opacity: 0.4; cursor: not-allowed; }
 .mc-recipe.locked .mc-arrow { opacity: 0.4; }
+
+/* 拖拽跟随光标：浮在面板之上，不拦截鼠标 */
+.drag-icon {
+  position: fixed;
+  width: 38px;
+  height: 38px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0.85;
+  background: rgba(60, 55, 48, 0.85);
+  border: 2px solid #9a9a9a;
+  border-radius: 4px;
+}
+.drag-icon svg { width: 80%; height: 80%; }
