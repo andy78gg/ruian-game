@@ -1,4 +1,6 @@
 // 底部快捷栏：渲染槽位、高亮选中项、显示数量，支持点击与按键切换。
+import { ICONS } from './icons.js?v=19';
+
 export function createHotbar(items) {
   const state = { items, selected: 0 };
   let onChange = null;
@@ -11,7 +13,7 @@ export function createHotbar(items) {
     slot.className = 'slot';
     slot.innerHTML = `
       <span class="key">${i + 1}</span>
-      <span class="icon">${item.icon}</span>
+      <span class="icon">${ICONS[item.id] || item.icon}</span>
       <span class="count"></span>`;
     slot.addEventListener('click', () => select(i));
     root.appendChild(slot);

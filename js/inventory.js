@@ -1,6 +1,8 @@
 // 资源背包：木材、石头计数；按 E 开合面板，含「背包」与「制作」两个标签。
 // 物品栏为独立背包库存（4 排 × 9 格），与底部快捷栏分离，互不重复。
 // 配方分两级：随身合成（hand）与工作台合成（workbench，需先拥有工作台）。
+import { ICONS } from './icons.js?v=19';
+
 export function createInventory({ hotbar } = {}) {
   const state = { wood: 0, stone: 0 };
   const elWood = document.getElementById('wood-count');
@@ -52,16 +54,17 @@ export function createInventory({ hotbar } = {}) {
     return !!w && w.count > 0;
   }
 
-  // 单个 MC 风格槽位
-  function slot(icon, name, count, opts = {}) {
+  // 单个 MC 风格槽位；id 对应图标字典，取不到时回退为文本
+  function slot(id, name, count, opts = {}) {
     const cls = ['mc-slot'];
     if (opts.small) cls.push('sm');
     if (opts.active) cls.push('active');
     if (opts.empty) cls.push('empty');
     if (opts.disabled) cls.push('disabled');
+    const art = ICONS[id] || id;
     const countHtml = count != null ? `<span class="mc-count">${count}</span>` : '';
     return `<div class="${cls.join(' ')}" title="${name}">
-      <span class="mc-icon">${icon}</span>${countHtml}
+      <span class="mc-icon">${art}</span>${countHtml}
     </div>`;
   }
 
@@ -96,7 +99,7 @@ export function createInventory({ hotbar } = {}) {
   // 物品栏：背包库存 4 排
   function renderItems() {
     const html = stash
-      .map((it) => slot(it.icon, it.name, it.count))
+      .map((it) => slot(it.id, it.name, it.count))
       .join('');
     itemGrid.innerHTML = padTo(html, stash.length, STASH_TOTAL);
   }
@@ -106,16 +109,15 @@ export function createInventory({ hotbar } = {}) {
     if (!hotbar) return;
     const sel = hotbar.state.selected;
     let html = hotbar.state.items.map((it, i) =>
-      slot(it.icon, it.name, it.count, { active: i === sel })
+      slot(it.id, it.name, it.count, { active: i === sel })
     ).join('');
     hotGrid.innerHTML = padTo(html, hotbar.state.items.length, STASH_COLS);
   }
 
   function costSlots(cost) {
     return Object.entries(cost).map(([k, v]) => {
-      const icon = k === 'wood' ? '🪵' : '🪨';
       const enough = state[k] >= v;
-      return slot(icon, k === 'wood' ? '木材' : '石头', v, { small: true, disabled: !enough });
+      return slot(k, k === 'wood' ? '木材' : '石头', v, { small: true, disabled: !enough });
     }).join('');
   }
 
@@ -127,7 +129,6 @@ export function createInventory({ hotbar } = {}) {
 
   function recipeRow(r) {
     const it = itemById(r.out);
-    const icon = it ? it.icon : '❔';
     const name = it ? it.name : r.out;
     const ok = canCraft(r);
     const lockedStation = r.station === 'workbench' && !hasWorkbench();
@@ -135,7 +136,7 @@ export function createInventory({ hotbar } = {}) {
       <div class="mc-recipe${ok ? '' : ' locked'}">
         <div class="mc-mats">${costSlots(r.cost)}</div>
         <div class="mc-arrow">→</div>
-        ${slot(icon, name, 1, { small: true, disabled: !ok })}
+        ${slot(it ? it.id : r.out, name, 1, { small: true, disabled: !ok })}
         <button class="mc-craft" data-out="${r.out}" ${ok ? '' : 'disabled'}>
           ${lockedStation ? '需工作台' : '合成'}
         </button>
