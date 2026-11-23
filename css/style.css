@@ -257,6 +257,15 @@ canvas { display: block; }
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+.mc-group {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e8d9b8;
+  margin: 14px 0 6px;
+  letter-spacing: 1px;
+}
+.mc-group:first-child { margin-top: 0; }
+.mc-group.locked { color: #8a8172; }
 .mc-grid {
   display: grid;
   grid-template-columns: repeat(9, 38px);
