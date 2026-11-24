@@ -1,7 +1,7 @@
 // 底部快捷栏：固定 9 格定长槽位（元素可为空），渲染高亮选中项、数量角标，
 // 支持点击 / 按键切换，并暴露槽位读写、堆叠合并与交换接口供背包拖拽调用。
-import { ICONS } from './icons.js?v=22';
-import { ITEMS, STACKABLE_IDS } from './items.js?v=22';
+import { ICONS } from './icons.js?v=23';
+import { ITEMS, STACKABLE_IDS } from './items.js?v=23';
 
 export const HOTBAR_SIZE = 9;
 
