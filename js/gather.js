@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 const REACH = 2.2; // 采集距离（贴近目标才可交互）
+const REACH2 = REACH * REACH; // 距离平方，避免开方
 const YIELD = { wood: 2, stone: 2 };
 
 // 采集判定：从相机中心射线命中树/石头/浆果灌木，校验工具，累计伤害，破坏后掉落资源。
@@ -24,6 +25,8 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
     ray.setFromCamera(center, camera);
     ray.far = REACH;
 
+    // 收集所有射线相交的目标，按交点到相机的距离排序，取最近的一个；
+    // 避免先遍历到的树/灌木宽包围盒把更近的石头挡住。
     const hits = [];
     const pt = new THREE.Vector3();
 
@@ -31,7 +34,9 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
       if (!obj.alive) return;
       box.setFromObject(obj.group);
       if (ray.ray.intersectBox(box, pt)) {
-        hits.push({ d: pt.distanceToSquared(ray.ray.origin), resource, obj });
+        const d2 = pt.distanceToSquared(ray.ray.origin);
+        // 几何求交不读取 ray.far，必须显式校验是否在近身距离内
+        if (d2 <= REACH2) hits.push({ d: d2, resource, obj });
       }
     }
 
@@ -71,6 +76,7 @@ export function createGather({ camera, trees, rocks, berries, inventory, hotbar,
       return;
     }
 
+    // 浆果灌木
     if (obj.berries <= 0) {
       onTip('浆果还没长出来');
       return;
