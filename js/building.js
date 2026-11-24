@@ -28,6 +28,7 @@ const MAT_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fc4d8, transparent:
 const MAT_FLAME = new THREE.MeshStandardMaterial({ color: 0xffa040, emissive: 0xff7a2a, emissiveIntensity: 1.4, roughness: 0.6 });
 
 const REACH = 2.5;
+const REACH2 = REACH * REACH;
 
 // 建造系统：预览幽灵模型、网格对齐放置、右键拆除返还。
 export function createBuilding({ scene, heightAt, inventory, onTip }) {
@@ -42,6 +43,7 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
   const ray = new THREE.Raycaster();
   const box = new THREE.Box3();
   const center = new THREE.Vector2(0, 0);
+  const hitPt = new THREE.Vector3();
 
   function currentPart() {
     return PART_KEYS[partIndex];
@@ -284,17 +286,18 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
     for (let i = placed.length - 1; i >= 0; i--) {
       const obj = placed[i];
       box.setFromObject(obj.mesh);
-      if (ray.ray.intersectsBox(box)) {
-        detach(obj);
-        // 拆除返还一半资源（向下取整）
-        for (const [k, v] of Object.entries(PARTS[obj.partKey].cost)) {
-          const refund = Math.floor(v / 2);
-          if (refund > 0) inventory.add(k, refund);
-        }
-        placed.splice(i, 1);
-        onTip('已拆除，返还部分资源');
-        return;
+      // 几何求交不读取 ray.far，取交点后显式校验近身距离
+      if (!ray.ray.intersectBox(box, hitPt)) continue;
+      if (hitPt.distanceToSquared(ray.ray.origin) > REACH2) continue;
+      detach(obj);
+      // 拆除返还一半资源（向下取整）
+      for (const [k, v] of Object.entries(PARTS[obj.partKey].cost)) {
+        const refund = Math.floor(v / 2);
+        if (refund > 0) inventory.add(k, refund);
       }
+      placed.splice(i, 1);
+      onTip('已拆除，返还部分资源');
+      return;
     }
   }
 
