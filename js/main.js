@@ -1,38 +1,32 @@
 import * as THREE from 'three';
-import { buildTerrain } from './terrain.js?v=23';
-import { buildTrees, buildGrass } from './trees.js?v=23';
-import { buildRocks } from './rocks.js?v=23';
-import { buildBerries } from './berries.js?v=23';
-import { buildScatter } from './scatter.js?v=23';
-import { buildMountains } from './mountains.js?v=23';
-import { buildWater } from './water.js?v=23';
-import { buildFlowers } from './flowers.js?v=23';
-import { createDayNight } from './daynight.js?v=23';
-import { createSurvival } from './survival.js?v=23';
-import { createHotbar } from './hotbar.js?v=23';
-import { createHeld } from './held.js?v=23';
-import { createInventory } from './inventory.js?v=23';
-import { createGather } from './gather.js?v=23';
-import { createBuilding } from './building.js?v=23';
-import { createEnemies } from './enemies.js?v=23';
-import { createParticles } from './particles.js?v=23';
-import { createAudio } from './audio.js?v=23';
+import { buildTerrain } from './terrain.js?v=24';
+import { buildTrees, buildGrass } from './trees.js?v=24';
+import { buildRocks } from './rocks.js?v=24';
+import { buildBerries } from './berries.js?v=24';
+import { buildScatter } from './scatter.js?v=24';
+import { buildMountains } from './mountains.js?v=24';
+import { buildWater } from './water.js?v=24';
+import { buildFlowers } from './flowers.js?v=24';
+import { createDayNight } from './daynight.js?v=24';
+import { createSurvival } from './survival.js?v=24';
+import { createHotbar } from './hotbar.js?v=24';
+import { createHeld } from './held.js?v=24';
+import { createInventory } from './inventory.js?v=24';
+import { createGather } from './gather.js?v=24';
+import { createBuilding } from './building.js?v=24';
+import { createEnemies } from './enemies.js?v=24';
+import { createParticles } from './particles.js?v=24';
+import { createAudio } from './audio.js?v=24';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-// ---------- 场景 ----------
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9fc8e8);
-scene.fog = new THREE.Fog(0x9fc8e8, 45, 130);
-
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 300);
-const EYE_HEIGHT = 1.7;
-
+// 渲染像素比：普通屏也至少按 2x 渲染保证锐利，高分屏用原生倍率，上限 3
+const PR = Math.min(Math.max(devicePixelRatio, 2), 3);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 3));
+renderer.setPixelRatio(PR);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -52,6 +46,7 @@ const bloomPass = new UnrealBloomPass(
 );
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
+composer.setPixelRatio(PR);
 
 // ---------- 光照 ----------
 const hemi = new THREE.HemisphereLight(0xbcd8ff, 0x5a6b45, 0.85);
@@ -465,6 +460,8 @@ animate();
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  renderer.setPixelRatio(PR);
   renderer.setSize(innerWidth, innerHeight);
+  composer.setPixelRatio(PR);
   composer.setSize(innerWidth, innerHeight);
 });
