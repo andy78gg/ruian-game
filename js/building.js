@@ -27,7 +27,7 @@ const MAT_CHEST = new THREE.MeshStandardMaterial({ color: 0x6e4a2c, flatShading:
 const MAT_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fc4d8, transparent: true, opacity: 0.45, roughness: 0.2, metalness: 0.1 });
 const MAT_FLAME = new THREE.MeshStandardMaterial({ color: 0xffa040, emissive: 0xff7a2a, emissiveIntensity: 1.4, roughness: 0.6 });
 
-const REACH = 3.5;
+const REACH = 2.5;
 
 // 建造系统：预览幽灵模型、网格对齐放置、右键拆除返还。
 export function createBuilding({ scene, heightAt, inventory, onTip }) {
@@ -214,8 +214,8 @@ export function createBuilding({ scene, heightAt, inventory, onTip }) {
 
   function computeTransform(player) {
     const dir = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-    const px = player.x + dir.x * 2.5;
-    const pz = player.z + dir.z * 2.5;
+    const px = player.x + dir.x * 2.0;
+    const pz = player.z + dir.z * 2.0;
     const gx = Math.round(px);
     const gz = Math.round(pz);
     const gy = heightAt(gx, gz);
