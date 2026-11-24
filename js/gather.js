@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const REACH = 3.5; // 采集距离
+const REACH = 2.2; // 采集距离（贴近目标才可交互）
 const YIELD = { wood: 2, stone: 2 };
 
 // 采集判定：从相机中心射线命中树/石头/浆果灌木，校验工具，累计伤害，破坏后掉落资源。
