@@ -12,6 +12,7 @@ const ENEMY_HP = 5;
 const CHASE_SPEED = 2.8;
 const WANDER_SPEED = 0.7;
 const REACH = 2.2;
+const REACH2 = REACH * REACH;
 const KNOCKBACK = 0.6;       // 受击后退距离
 const FLASH_TIME = 0.15;     // 受击闪红时长
 const WAVE_TARGET = 3;       // 夜晚同时存活上限
@@ -44,6 +45,7 @@ export function createEnemies({
   const ray = new THREE.Raycaster();
   const box = new THREE.Box3();
   const center = new THREE.Vector2(0, 0);
+  const hitPt = new THREE.Vector3();
 
   function buildMesh() {
     const g = new THREE.Group();
@@ -343,25 +345,26 @@ export function createEnemies({
     for (const e of enemies) {
       if (!e.alive) continue;
       box.setFromObject(e.mesh);
-      if (ray.ray.intersectsBox(box)) {
-        e.hp -= dmg;
-        e.flash = FLASH_TIME;
-        const p = e.mesh.position.clone();
-        p.y += 0.8;
-        particles.burst(p, { color: 0xb02a2a, count: 6, size: 0.04, speed: 1.6, gravity: 8, life: 0.45 });
-        // 受击后退半步（沿敌人→玩家反方向）
-        const kx = e.x - player.x;
-        const kz = e.z - player.z;
-        const kd = Math.hypot(kx, kz) || 1;
-        e.x += (kx / kd) * KNOCKBACK;
-        e.z += (kz / kd) * KNOCKBACK;
-        if (e.hp <= 0) killEnemy(e);
-        else {
-          if (onSound) onSound('chop');
-          onTip(`敌人受击（-${dmg}），剩余 ${e.hp}`);
-        }
-        return true;
+      // 几何求交不读取 ray.far，取交点后显式校验近身距离
+      if (!ray.ray.intersectBox(box, hitPt)) continue;
+      if (hitPt.distanceToSquared(ray.ray.origin) > REACH2) continue;
+      e.hp -= dmg;
+      e.flash = FLASH_TIME;
+      const p = e.mesh.position.clone();
+      p.y += 0.8;
+      particles.burst(p, { color: 0xb02a2a, count: 6, size: 0.04, speed: 1.6, gravity: 8, life: 0.45 });
+      // 受击后退半步（沿敌人→玩家反方向）
+      const kx = e.x - player.x;
+      const kz = e.z - player.z;
+      const kd = Math.hypot(kx, kz) || 1;
+      e.x += (kx / kd) * KNOCKBACK;
+      e.z += (kz / kd) * KNOCKBACK;
+      if (e.hp <= 0) killEnemy(e);
+      else {
+        if (onSound) onSound('chop');
+        onTip(`敌人受击（-${dmg}），剩余 ${e.hp}`);
       }
+      return true;
     }
     return false;
   }
