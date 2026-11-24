@@ -2,8 +2,8 @@
 // 物品栏为独立 4 排 × 9 格定长槽位（36 格），与底部快捷栏（9 格）分离，互不重复。
 // 两组槽位均支持 MC 式左键拖拽：空位移动、同类堆叠合并、异类交换，跨区亦可。
 // 配方分两级：随身合成（hand）与工作台合成（workbench，需先拥有工作台）。
-import { ICONS } from './icons.js?v=23';
-import { ITEM_META } from './items.js?v=23';
+import { ICONS } from './icons.js?v=24';
+import { ITEM_META } from './items.js?v=24';
 
 export function createInventory({ hotbar } = {}) {
   const state = { wood: 0, stone: 0 };
@@ -103,7 +103,7 @@ export function createInventory({ hotbar } = {}) {
     if (opts.disabled) cls.push('disabled');
     const art = ICONS[id] || id;
     const countHtml = count != null ? `<span class="mc-count">${count}</span>` : '';
-    return `<div class="${cls.join(' ')}" title="${name}">
+    return `<div class="mc-slot" title="${name}">
       <span class="mc-icon">${art}</span>${countHtml}
     </div>`;
   }
