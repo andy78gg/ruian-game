@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ruian Game · 地形原型</title>
-  <link rel="stylesheet" href="css/style.css?v=25" />
+  <title>Ruian Game · 生存建造</title>
+  <link rel="stylesheet" href="css/style.css?v=26" />
   <script type="importmap">
     {
       "imports": {
@@ -16,8 +16,8 @@
 </head>
 <body>
   <div id="hud">
-    <div class="title">Ruian Game · 地形与树木原型</div>
-    <div class="tips">点击画面锁定鼠标 · WASD 移动 · Shift 奔跑 · 空格跳跃 · E 背包 · 鼠标控制视角</div>
+    <div class="title">Ruian Game · 生存建造</div>
+    <div class="tips">点击画面锁定鼠标 · WASD 移动 · Shift 疾跑（消耗体力）· 空格跳跃 · E 背包 · 鼠标控制视角</div>
   </div>
 
   <div id="phase"></div>
@@ -29,7 +29,6 @@
 
   <div id="gather-tip"></div>
   <div id="build-hint"></div>
-  <div id="dbg" style="position:fixed;top:60px;left:10px;color:#fff;font-size:12px;z-index:99;text-shadow:0 1px 2px #000"></div>
 
   <div id="status">
     <div class="bar-row">
@@ -39,6 +38,10 @@
     <div class="bar-row">
       <span class="bar-label">食物</span>
       <div class="bar"><div id="food-bar" class="fill food"></div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">体力</span>
+      <div class="bar"><div id="stamina-bar" class="fill stamina"></div></div>
     </div>
   </div>
 
@@ -71,6 +74,6 @@
     <div class="death-sub">正在重生…</div>
   </div>
 
-  <script type="module" src="js/main.js?v=25"></script>
+  <script type="module" src="js/main.js?v=26"></script>
 </body>
 </html>

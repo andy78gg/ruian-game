@@ -1,26 +1,34 @@
 import * as THREE from 'three';
-import { buildTerrain } from './terrain.js?v=25';
-import { buildTrees, buildGrass } from './trees.js?v=25';
-import { buildRocks } from './rocks.js?v=25';
-import { buildBerries } from './berries.js?v=25';
-import { buildScatter } from './scatter.js?v=25';
-import { buildMountains } from './mountains.js?v=25';
-import { buildWater } from './water.js?v=25';
-import { buildFlowers } from './flowers.js?v=25';
-import { createDayNight } from './daynight.js?v=25';
-import { createSurvival } from './survival.js?v=25';
-import { createHotbar } from './hotbar.js?v=25';
-import { createHeld } from './held.js?v=25';
-import { createInventory } from './inventory.js?v=25';
-import { createGather } from './gather.js?v=25';
-import { createBuilding } from './building.js?v=25';
-import { createEnemies } from './enemies.js?v=25';
-import { createParticles } from './particles.js?v=25';
-import { createAudio } from './audio.js?v=25';
+import { buildTerrain } from './terrain.js?v=26';
+import { buildTrees, buildGrass } from './trees.js?v=26';
+import { buildRocks } from './rocks.js?v=26';
+import { buildBerries } from './berries.js?v=26';
+import { buildScatter } from './scatter.js?v=26';
+import { buildMountains } from './mountains.js?v=26';
+import { buildWater } from './water.js?v=26';
+import { buildFlowers } from './flowers.js?v=26';
+import { createDayNight } from './daynight.js?v=26';
+import { createSurvival } from './survival.js?v=26';
+import { createHotbar } from './hotbar.js?v=26';
+import { createHeld } from './held.js?v=26';
+import { createInventory } from './inventory.js?v=26';
+import { createGather } from './gather.js?v=26';
+import { createBuilding } from './building.js?v=26';
+import { createEnemies } from './enemies.js?v=26';
+import { createParticles } from './particles.js?v=26';
+import { createAudio } from './audio.js?v=26';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ---------- 场景 / 相机 ----------
+// 眼高取成年真人 1.68m；配 72° 视野，接近人眼自然视角。
+const EYE_HEIGHT = 1.68;
+const scene = new THREE.Scene();
+// 雾的近远值配合地形尺度：近处清晰，远处山体自然淡入天色而不是硬切。
+scene.fog = new THREE.Fog(0x9fc8e8, 26, 155);
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 600);
 
 // 渲染像素比：普通屏也至少按 2x 渲染保证锐利，高分屏用原生倍率，上限 3
 const PR = Math.min(Math.max(devicePixelRatio, 2), 3);
@@ -68,6 +76,10 @@ sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
 sun.shadow.radius = 4;
 scene.add(sun);
+// 阴影相机跟随玩家时需要一个在场景内的 target，否则矩阵不更新
+sun.target.position.set(0, 0, 0);
+scene.add(sun.target);
+const sunDirWorld = new THREE.Vector3();
 
 // ---------- 地形 / 植被 ----------
 const { mesh: terrain, heightAt } = buildTerrain();
@@ -120,6 +132,7 @@ const el = {
   phase: document.getElementById('phase'),
   health: document.getElementById('health-bar'),
   food: document.getElementById('food-bar'),
+  stamina: document.getElementById('stamina-bar'),
   hurt: document.getElementById('hurt-overlay'),
 };
 
@@ -157,6 +170,9 @@ function updateHUD() {
   el.phase.textContent = `${p.label} · ${p.next} ${formatTime(p.remaining)}`;
   el.health.style.width = `${survival.state.health}%`;
   el.food.style.width = `${survival.state.food}%`;
+  el.stamina.style.width = `${survival.state.stamina}%`;
+  // 体力见底时血条旁闪一下，提示跑不动了
+  el.stamina.style.opacity = survival.state.stamina < 15 ? (0.55 + Math.sin(elapsed * 14) * 0.35).toFixed(2) : '1';
 
   const hint = document.getElementById('build-hint');
   if (building.buildMode) {
@@ -179,6 +195,8 @@ const player = {
   vy: 0,
   onGround: true,
 };
+// 水平速度（带惯性），与垂直速度 vy 分开管理
+const vel = { x: 0, z: 0 };
 camera.position.set(0, player.y + EYE_HEIGHT, 0);
 
 // ---------- 敌人 AI ----------
@@ -273,6 +291,8 @@ function respawn() {
   player.y = heightAt(0, 0);
   player.vy = 0;
   player.onGround = true;
+  vel.x = 0;
+  vel.z = 0;
   player.yaw = 0;
   player.pitch = 0;
   survival.respawn();
@@ -336,6 +356,11 @@ const clock = new THREE.Clock();
 let elapsed = 0;
 let splashTimer = 0;
 let stepDist = 0;
+// 镜头状态：步频相位 / 晃动幅度 / 落地缓冲 / 呼吸计时
+let bobPhase = 0;
+let bobAmp = 0;
+let landDip = 0;
+let breathTimer = 0;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -347,7 +372,13 @@ function animate() {
   dayNight.update(dt);
   const phaseKey = dayNight.getPhase().key;
   audio.setNight(phaseKey === 'night' || phaseKey === 'dusk');
-  survival.update(dt);
+
+  // 太阳光与阴影相机跟着玩家走：走出原点那片区域后不再丢影子
+  sunDirWorld.copy(dayNight.getSunDir()).multiplyScalar(58);
+  sun.position.set(player.x + sunDirWorld.x, Math.max(6, sunDirWorld.y), player.z + sunDirWorld.z);
+  sun.target.position.set(player.x, 0, player.z);
+  sun.target.updateMatrixWorld();
+
   hurtTimer = Math.max(0, hurtTimer - dt);
   el.hurt.style.opacity = hurtTimer > 0 ? (hurtTimer / 0.35) * 0.55 : 0;
   building.update(player);
@@ -358,22 +389,12 @@ function animate() {
   grass.update(elapsed);
   water.update(elapsed);
 
-  // 死亡检测与重生计时
-  if (survival.state.health <= 0 && !dead) {
-    dead = true;
-    deathTimer = 0;
-    deathScreen.classList.add('show');
-    document.exitPointerLock();
-  }
-  if (dead) {
-    deathTimer += dt;
-    if (deathTimer >= 2.5) respawn();
-  }
-
   if (!dead) {
   const invOpen = inventory.isOpen;
-  running = !invOpen && (keys['ShiftLeft'] || keys['ShiftRight']);
   const inWater = water.isInWater(player.x, player.z);
+  // 体力见底时跑不动，只能走
+  const canSprint = survival.state.stamina > 1;
+  running = !invOpen && (keys['ShiftLeft'] || keys['ShiftRight']) && canSprint;
   const speed = (running ? 9 : 5) * (inWater ? 0.6 : 1);
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
   const right = new THREE.Vector3(-forward.z, 0, forward.x);
@@ -386,12 +407,19 @@ function animate() {
     if (keys['KeyA']) move.sub(right);
   }
 
-  moving = move.lengthSq() > 0;
+  const hasInput = move.lengthSq() > 0;
+  if (hasInput) move.normalize();
 
-  if (moving) {
-    move.normalize().multiplyScalar(speed * dt);
-    player.x += move.x;
-    player.z += move.z;
+  // 速度惯性：向目标速度指数逼近，起步比刹车慢，走动不再像无质量瞬移
+  const smoothing = 1 - Math.exp(-(hasInput ? 9 : 13) * dt);
+  vel.x += (move.x * speed - vel.x) * smoothing;
+  vel.z += (move.z * speed - vel.z) * smoothing;
+  const velLen = Math.hypot(vel.x, vel.z);
+  moving = velLen > 0.35;
+
+  if (velLen > 0.01) {
+    player.x += vel.x * dt;
+    player.z += vel.z * dt;
     player.x = THREE.MathUtils.clamp(player.x, -55, 55);
     player.z = THREE.MathUtils.clamp(player.z, -55, 55);
 
@@ -408,49 +436,89 @@ function animate() {
       splashTimer = 0;
     }
 
-    // 地面脚步：按步距累计触发，奔跑步幅更大
+    // 地面脚步：按实际移动速度和步距累计触发，奔跑步幅更大
     if (player.onGround) {
-      stepDist += speed * dt;
+      stepDist += velLen * dt;
       const stride = running ? 2.6 : 1.8;
       if (stepDist >= stride) {
         stepDist = 0;
         audio.play('footstep');
       }
     }
+  } else {
+    splashTimer = 0;
   }
 
   resolveCollisions();
 
-  // 跳跃与重力
+  // 跳跃与重力：起跳要花一点体力，落地按下落速度产生下沉缓冲
   if (keys['Space'] && player.onGround) {
     player.vy = JUMP_SPEED;
     player.onGround = false;
+    survival.spend(6);
   }
   player.vy -= GRAVITY * dt;
   player.y += player.vy * dt;
 
   const groundY = heightAt(player.x, player.z);
   if (player.y <= groundY) {
+    if (!player.onGround && player.vy < -4) {
+      landDip = Math.min(0.16, -player.vy * 0.014);
+      audio.play('land');
+    }
     player.y = groundY;
     player.vy = 0;
     player.onGround = true;
   }
   }
 
-  held.update(dt, moving, running);
+  // 生存数值：疾跑消耗体力，停下后延迟回复；空腹时几乎回不了体力
+  survival.update(dt, { sprinting: running && moving });
 
-  // 临时调试：把握持点局部坐标写到页面 DOM，便于核对实际渲染位置
-  held._dbgF = (held._dbgF || 0) + 1;
-  if (held._dbgF % 10 === 0) {
-    const hp = held._holder.position;
-    const dbg = document.getElementById('dbg');
-    if (dbg) dbg.textContent = `holder x=${hp.x.toFixed(2)} y=${hp.y.toFixed(2)} z=${hp.z.toFixed(2)}`;
+  // 死亡检测与重生计时
+  if (survival.state.health <= 0 && !dead) {
+    dead = true;
+    deathTimer = 0;
+    deathScreen.classList.add('show');
+    document.exitPointerLock();
+  }
+  if (dead) {
+    deathTimer += dt;
+    if (deathTimer >= 2.5) respawn();
   }
 
-  camera.position.set(player.x, player.y + EYE_HEIGHT, player.z);
+  held.update(dt, moving, running);
+
+  // 体力见底时粗重呼吸，越低越频繁
+  breathTimer -= dt;
+  if (survival.state.stamina < 30 && breathTimer <= 0) {
+    breathTimer = 1.0 + survival.state.stamina * 0.012;
+    audio.play('breath');
+  }
+
+  // 镜头晃动：走动按步频起伏（垂直双频 + 横向单频），静止时转为缓慢呼吸起伏；
+  // 疾跑视野外扩制造速度感，落地时先下沉再回弹。
+  if (moving && !dead) bobPhase += dt * (running ? 11.5 : 7.6);
+  const bobTarget = moving && !dead ? (running ? 0.058 : 0.034) : 0;
+  bobAmp += (bobTarget - bobAmp) * Math.min(1, dt * 7);
+  const bobY = Math.sin(bobPhase * 2) * bobAmp + Math.sin(elapsed * 1.5) * 0.006;
+  const bobX = Math.cos(bobPhase) * bobAmp * 0.75;
+  landDip *= Math.exp(-dt * 9);
+  camera.position.set(
+    player.x + Math.cos(player.yaw) * bobX,
+    player.y + EYE_HEIGHT + bobY - landDip,
+    player.z - Math.sin(player.yaw) * bobX
+  );
   camera.rotation.order = 'YXZ';
   camera.rotation.y = player.yaw;
   camera.rotation.x = player.pitch;
+  camera.rotation.z = bobX * 0.5;
+
+  const targetFov = running ? 77 : 72;
+  if (Math.abs(camera.fov - targetFov) > 0.05) {
+    camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 5);
+    camera.updateProjectionMatrix();
+  }
 
   updateHUD();
   composer.render();

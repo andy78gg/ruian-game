@@ -123,10 +123,11 @@ export function createDayNight({ scene, sun, hemi }) {
   function update(dt) {
     t = (t + dt / DAY_LENGTH) % 1;
 
-    // 太阳轨迹：t=0.25 正午位于最高点
+    // 太阳轨迹：t=0.25 正午位于天顶，t=0 日出、t=0.5 日落、t=0.75 午夜。
+    // 用 cos 做高度、sin 做方位，正午才是最高点（之前用 sin，正午反而压在地平线上，白天一片灰暗）。
     const angle = (t - 0.25) * Math.PI * 2;
-    const elevation = Math.sin(angle); // -1 .. 1
-    const azimuth = Math.cos(angle);
+    const elevation = Math.cos(angle); // -1 .. 1
+    const azimuth = Math.sin(angle);
     sun.position.set(40 * azimuth, 40 * elevation, 20);
 
     const dayFactor = THREE.MathUtils.smoothstep(elevation, -0.08, 0.25);
@@ -170,5 +171,10 @@ export function createDayNight({ scene, sun, hemi }) {
     return { ...p, remaining };
   }
 
-  return { update, getPhase };
+  // 供主循环把平行光与阴影相机挂到玩家附近使用（返回内部向量，调用方只读拷贝）
+  function getSunDir() {
+    return sunDir;
+  }
+
+  return { update, getPhase, getSunDir };
 }

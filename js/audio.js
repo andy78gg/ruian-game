@@ -148,6 +148,16 @@ export function createAudio() {
     footstep() {
       noise({ dur: 0.06, vol: 0.07, filter: 420 });
     },
+    // 落地：比脚步更沉的下坠闷响
+    land() {
+      tone({ freq: 92, slide: 54, type: 'sine', vol: 0.18, dur: 0.15 });
+      noise({ dur: 0.1, vol: 0.09, filter: 300 });
+    },
+    // 体力见底时的粗重呼吸：带通噪声，一次气息
+    breath() {
+      noise({ dur: 0.34, vol: 0.055, filter: 620, band: true });
+      noise({ dur: 0.2, vol: 0.03, filter: 900, band: true, delay: 0.36 });
+    },
   };
 
   function play(name) {

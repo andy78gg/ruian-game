@@ -57,6 +57,7 @@ canvas { display: block; }
 .fill { height: 100%; border-radius: 5px; transition: width 0.25s ease; }
 .fill.health { background: #d94b4b; }
 .fill.food { background: #e8b339; }
+.fill.stamina { background: #4fb3a4; }
 
 /* 底部快捷栏 */
 #hotbar {
