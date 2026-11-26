@@ -1,15 +1,24 @@
 import * as THREE from 'three';
 
 const MAT = {
-  wood: new THREE.MeshStandardMaterial({ color: 0x8a5a33, flatShading: false, roughness: 0.9 }),
-  woodDark: new THREE.MeshStandardMaterial({ color: 0x6b4426, flatShading: false, roughness: 0.95 }),
-  metal: new THREE.MeshStandardMaterial({ color: 0x9aa2ad, flatShading: false, roughness: 0.45, metalness: 0.5 }),
-  metalBright: new THREE.MeshStandardMaterial({ color: 0xc8d0d8, flatShading: false, roughness: 0.35, metalness: 0.55 }),
-  stone: new THREE.MeshStandardMaterial({ color: 0x8d8d8d, flatShading: false, roughness: 0.9 }),
-  food: new THREE.MeshStandardMaterial({ color: 0xe8b339, flatShading: false, roughness: 0.8 }),
-  leaf: new THREE.MeshStandardMaterial({ color: 0x4c8a3a, flatShading: false, roughness: 1 }),
-  skin: new THREE.MeshStandardMaterial({ color: 0xc98d63, flatShading: false, roughness: 0.7 }),
-  sleeve: new THREE.MeshStandardMaterial({ color: 0x5a6472, flatShading: false, roughness: 0.95 }),
+  wood: new THREE.MeshStandardMaterial({ color: 0x8a5a33, roughness: 0.88, metalness: 0 }),
+  woodDark: new THREE.MeshStandardMaterial({ color: 0x5d3a20, roughness: 0.94, metalness: 0 }),
+  rope: new THREE.MeshStandardMaterial({ color: 0x6d5734, roughness: 0.98, metalness: 0 }),
+  // 金属：没有环境贴图时金属度一高正面就发黑，降到 0.2 左右并补一点冷色自发光，
+  // 才能读出"钢"的亮度而不是一片黑铁板
+  metal: new THREE.MeshStandardMaterial({
+    color: 0xb9c2cd, roughness: 0.38, metalness: 0.18,
+    emissive: new THREE.Color(0x1b212a), emissiveIntensity: 0.65,
+  }),
+  metalBright: new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0, roughness: 0.27, metalness: 0.22,
+    emissive: new THREE.Color(0x222932), emissiveIntensity: 0.5,
+  }),
+  stone: new THREE.MeshStandardMaterial({ color: 0x8b8b86, roughness: 0.92, metalness: 0 }),
+  food: new THREE.MeshStandardMaterial({ color: 0xe0a92f, roughness: 0.75, metalness: 0 }),
+  leaf: new THREE.MeshStandardMaterial({ color: 0x4c8a3a, roughness: 1, metalness: 0 }),
+  skin: new THREE.MeshStandardMaterial({ color: 0xc4885f, roughness: 0.72, metalness: 0 }),
+  sleeve: new THREE.MeshStandardMaterial({ color: 0x54606f, roughness: 0.95, metalness: 0 }),
 };
 
 function mesh(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
@@ -19,103 +28,193 @@ function mesh(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
   return m;
 }
 
-// 用基础几何体拼装立体手持模型：握把、金属箍、刃部/倒刺、盾脐铆钉等多部件组合。
+// 旋转成形：剖面 [半径, 高度] 绕 y 轴旋成，两端自动收口
+function lathe(points, segments = 10) {
+  const pts = points.map(([r, y]) => new THREE.Vector2(Math.max(r, 0.0002), y));
+  return new THREE.LatheGeometry(pts, segments);
+}
+
+// 沿 y 轴的木柄：两端略放、中段微收，底部平口。原点定在握持处（柄尾往下 8cm）
+function handleGeometry(len, rButt = 0.026, rTop = 0.023) {
+  const pts = [[0.0002, 0], [rButt * 1.06, 0.005]];
+  const n = 6;
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    const r = THREE.MathUtils.lerp(rButt, rTop, t) * (1 - 0.14 * Math.sin(t * Math.PI));
+    pts.push([r, t * len]);
+  }
+  pts.push([rTop * 1.06, len - 0.005], [0.0002, len]);
+  const geo = lathe(pts, 10);
+  geo.translate(0, -0.08, 0); // 柄尾落在线下 8cm，手指自然握在原点附近
+  return geo;
+}
+
+// 挤压成形：把 2D 轮廓挤出成有厚度的板件，带小倒角，边缘不是纸片
+function extrudeShape(shape, depth, curveSegments = 12) {
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: true,
+    bevelThickness: depth * 0.3,
+    bevelSize: depth * 0.22,
+    bevelSegments: 2,
+    curveSegments,
+  });
+  geo.translate(0, 0, -depth / 2);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// 缠绳：一圈圈套在柄上，替代原来光秃秃的圆柱
+function wrapRing(r, y, mat = MAT.rope, tube = 0.0042) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 5, 12), mat);
+  m.position.y = y;
+  m.rotation.x = Math.PI / 2;
+  return m;
+}
+
+// 镐头：内凹的新月剖面，两端收成尖、向下弯，中间厚 —— 真实十字镐的剪影
+function pickHeadGeometry() {
+  const s = new THREE.Shape();
+  s.moveTo(-0.23, -0.02);
+  s.quadraticCurveTo(-0.07, 0.13, 0, 0.145); // 上弧，中央隆起
+  s.quadraticCurveTo(0.07, 0.13, 0.23, -0.02); // 右臂下弯收尖
+  s.quadraticCurveTo(0.08, 0.05, 0, 0.055); // 内凹下弧
+  s.quadraticCurveTo(-0.08, 0.05, -0.23, -0.02); // 左臂回到尖端
+  return extrudeShape(s, 0.04, 16);
+}
+
+// 斧头：斧背 + 渐宽斧身 + 弧形刃口
+function axeHeadGeometry() {
+  const s = new THREE.Shape();
+  s.moveTo(-0.062, 0.058);
+  s.lineTo(0.012, 0.082);
+  s.quadraticCurveTo(0.105, 0.104, 0.152, 0.062); // 上刃肩
+  s.quadraticCurveTo(0.176, 0.028, 0.172, -0.004); // 刃口上端
+  s.quadraticCurveTo(0.166, -0.052, 0.132, -0.062); // 弧形刃口
+  s.quadraticCurveTo(0.07, -0.078, 0.006, -0.062);
+  s.lineTo(-0.062, -0.052); // 斧背
+  s.closePath();
+  return extrudeShape(s, 0.03, 14);
+}
+
+// 矛头：压扁的双锥石刃 + 倒刺，绑在杆头
+function spearHeadGeometry() {
+  const geo = new THREE.OctahedronGeometry(0.05, 0);
+  geo.scale(1.05, 2.7, 0.34);
+  geo.translate(0, 0.13, 0);
+  return geo;
+}
+
+// 用基础几何 + 旋转/挤压成形拼装手持模型
 function buildModel(type) {
   const g = new THREE.Group();
 
   switch (type) {
     case 'pickaxe': {
-      // 木柄 + 底部缠握 + 顶部金属箍 + 两头下弯的镐头
-      const handle = mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.62, 8), MAT.wood, 0, 0, 0);
-      const grip1 = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.05, 8), MAT.woodDark, 0, -0.22, 0);
-      const grip2 = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.05, 8), MAT.woodDark, 0, -0.14, 0);
-      const collar = mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.05, 8), MAT.metal, 0, 0.26, 0);
-      const block = mesh(new THREE.BoxGeometry(0.12, 0.07, 0.07), MAT.metal, 0, 0.3, 0);
-      const tipL = mesh(new THREE.ConeGeometry(0.05, 0.18, 6), MAT.metal, -0.14, 0.28, 0, 0, 0, Math.PI / 2.3);
-      const tipR = mesh(new THREE.ConeGeometry(0.05, 0.18, 6), MAT.metal, 0.14, 0.28, 0, 0, 0, -Math.PI / 2.3);
-      g.add(handle, grip1, grip2, collar, block, tipL, tipR);
+      // 0.72m 木柄（握柄缠绳）+ 金属颈箍 + 新月镐头
+      const len = 0.72;
+      const handle = mesh(handleGeometry(len), MAT.wood, 0, 0, 0);
+      // 镐头坐在柄顶，内凹的下弧刚好咬住柄端，不像浮在杆子尖端；略微上仰让刃面吃到天光
+      const head = mesh(pickHeadGeometry(), MAT.metal, 0, len - 0.135, 0, -0.13, 0, 0);
+      const collar = mesh(
+        lathe([[0.014, 0], [0.026, 0.01], [0.026, 0.042], [0.014, 0.052]], 10),
+        MAT.metal,
+        0,
+        len - 0.3,
+        0
+      );
+      g.add(handle, head, collar);
+      for (const y of [-0.055, 0.0, 0.055]) g.add(wrapRing(0.0275, y));
       break;
     }
     case 'axe': {
-      // 木柄 + 金属箍 + 斧眼 + 斧背 + 宽斧刃
-      const handle = mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.62, 8), MAT.wood, 0, 0, 0);
-      const collar = mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.05, 8), MAT.metal, 0, 0.25, 0);
-      const eye = mesh(new THREE.BoxGeometry(0.07, 0.1, 0.07), MAT.metal, 0, 0.28, 0);
-      const back = mesh(new THREE.BoxGeometry(0.05, 0.18, 0.06), MAT.metal, -0.045, 0.28, 0);
-      const blade = mesh(new THREE.BoxGeometry(0.15, 0.17, 0.04), MAT.metal, 0.09, 0.28, 0, 0, 0, 0.08);
-      const edge = mesh(new THREE.BoxGeometry(0.04, 0.19, 0.02), MAT.metal, 0.17, 0.28, 0, 0, 0, 0.08);
-      g.add(handle, collar, eye, back, blade, edge);
+      const len = 0.7;
+      const handle = mesh(handleGeometry(len, 0.025, 0.022), MAT.wood, 0, 0, 0);
+      const head = mesh(axeHeadGeometry(), MAT.metal, 0, len - 0.075, 0);
+      const wedge = mesh(new THREE.BoxGeometry(0.05, 0.02, 0.032), MAT.woodDark, 0, len - 0.058, 0);
+      g.add(handle, head, wedge);
+      for (const y of [-0.045, 0.02]) g.add(wrapRing(0.0265, y));
       break;
     }
     case 'steelAxe': {
-      // 钢斧：深木柄，亮金属斧身与刃口
-      const handle = mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.62, 8), MAT.woodDark, 0, 0, 0);
-      const collar = mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.05, 8), MAT.metalBright, 0, 0.25, 0);
-      const eye = mesh(new THREE.BoxGeometry(0.07, 0.1, 0.07), MAT.metalBright, 0, 0.28, 0);
-      const back = mesh(new THREE.BoxGeometry(0.05, 0.18, 0.06), MAT.metalBright, -0.045, 0.28, 0);
-      const blade = mesh(new THREE.BoxGeometry(0.15, 0.17, 0.04), MAT.metalBright, 0.09, 0.28, 0, 0, 0, 0.08);
-      const edge = mesh(new THREE.BoxGeometry(0.04, 0.19, 0.02), MAT.metalBright, 0.17, 0.28, 0, 0, 0, 0.08);
-      g.add(handle, collar, eye, back, blade, edge);
+      const len = 0.7;
+      const handle = mesh(handleGeometry(len, 0.025, 0.022), MAT.woodDark, 0, 0, 0);
+      const head = mesh(axeHeadGeometry(), MAT.metalBright, 0, len - 0.075, 0);
+      const wedge = mesh(new THREE.BoxGeometry(0.05, 0.02, 0.032), MAT.metal, 0, len - 0.058, 0);
+      const guard = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.014, 10), MAT.metalBright, 0, len - 0.152, 0);
+      g.add(handle, head, wedge, guard);
+      for (const y of [-0.045, 0.02]) g.add(wrapRing(0.0265, y));
       break;
     }
     case 'spear': {
-      // 长木杆 + 石质矛头基座 + 主尖 + 两侧倒刺 + 尾锥
-      const shaft = mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.85, 8), MAT.wood, 0, 0, 0);
-      const base = mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 8), MAT.stone, 0, 0.43, 0);
-      const tip = mesh(new THREE.ConeGeometry(0.05, 0.16, 6), MAT.stone, 0, 0.54, 0);
-      const barbL = mesh(new THREE.ConeGeometry(0.02, 0.08, 5), MAT.stone, -0.04, 0.45, 0, 0, 0, Math.PI / 2.5);
-      const barbR = mesh(new THREE.ConeGeometry(0.02, 0.08, 5), MAT.stone, 0.04, 0.45, 0, 0, 0, -Math.PI / 2.5);
-      const butt = mesh(new THREE.ConeGeometry(0.02, 0.08, 6), MAT.woodDark, 0, -0.46, 0, Math.PI, 0, 0);
-      g.add(shaft, base, tip, barbL, barbR, butt);
+      // 细长木杆 + 石刃 + 两道绑绳 + 尾锥
+      const len = 1.0;
+      const shaft = mesh(handleGeometry(len, 0.019, 0.015), MAT.wood, 0, 0, 0);
+      const head = mesh(spearHeadGeometry(), MAT.stone, 0, len - 0.2, 0);
+      const barbL = mesh(new THREE.ConeGeometry(0.016, 0.07, 5), MAT.stone, -0.035, len - 0.16, 0, 0, 0, 0.9);
+      const barbR = mesh(new THREE.ConeGeometry(0.016, 0.07, 5), MAT.stone, 0.035, len - 0.16, 0, 0, 0, -0.9);
+      const butt = mesh(new THREE.ConeGeometry(0.017, 0.05, 6), MAT.woodDark, 0, -0.1, 0, Math.PI, 0, 0);
+      g.add(shaft, head, barbL, barbR, butt);
+      for (const y of [len - 0.212, len - 0.245]) g.add(wrapRing(0.0205, y));
       break;
     }
     case 'shield': {
-      // 圆木板 + 金属边缘箍 + 横竖木肋 + 中央金属凸脐 + 一圈铆钉
+      // 圆木板（边缘略厚）+ 包边 + 横竖木肋 + 中央铁脐 + 一圈铆钉
       const board = mesh(
-        new THREE.CylinderGeometry(0.23, 0.23, 0.05, 12),
+        lathe([[0.225, -0.022], [0.235, -0.01], [0.235, 0.01], [0.225, 0.022]], 16),
         MAT.wood,
         0, 0, 0,
         Math.PI / 2, 0, 0
       );
-      const rim = mesh(new THREE.TorusGeometry(0.23, 0.016, 8, 28), MAT.metal, 0, 0, 0);
-      const ribV = mesh(new THREE.BoxGeometry(0.05, 0.4, 0.03), MAT.woodDark, 0, 0, 0.02);
-      const ribH = mesh(new THREE.BoxGeometry(0.4, 0.05, 0.03), MAT.woodDark, 0, 0, 0.02);
-      const boss = mesh(new THREE.SphereGeometry(0.06, 12, 8), MAT.metal, 0, 0, 0.04);
-      boss.scale.z = 0.5;
+      const rim = mesh(new THREE.TorusGeometry(0.232, 0.014, 6, 30), MAT.metal, 0, 0, 0);
+      const ribV = mesh(new THREE.BoxGeometry(0.05, 0.42, 0.022), MAT.woodDark, 0, 0, 0.03);
+      const ribH = mesh(new THREE.BoxGeometry(0.42, 0.05, 0.022), MAT.woodDark, 0, 0, 0.03);
+      const boss = mesh(new THREE.SphereGeometry(0.06, 14, 10), MAT.metal, 0, 0, 0.036);
+      boss.scale.z = 0.45;
       g.add(board, rim, ribV, ribH, boss);
-      for (let i = 0; i < 6; i++) {
-        const ang = (i / 6) * Math.PI * 2;
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2;
         const rivet = mesh(
-          new THREE.SphereGeometry(0.018, 8, 6),
+          new THREE.SphereGeometry(0.014, 8, 6),
           MAT.metal,
-          Math.cos(ang) * 0.17,
-          Math.sin(ang) * 0.17,
-          0.03
+          Math.cos(ang) * 0.2,
+          Math.sin(ang) * 0.2,
+          0.024
         );
         g.add(rivet);
       }
       break;
     }
     case 'food': {
-      // 玉米棒 + 纵向苞叶 + 顶部梗
-      const cob = mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.24, 8), MAT.food, 0, 0, 0);
-      const huskL = mesh(new THREE.ConeGeometry(0.05, 0.14, 5), MAT.leaf, -0.04, -0.08, 0, 0, 0, 0.5);
-      const huskR = mesh(new THREE.ConeGeometry(0.05, 0.14, 5), MAT.leaf, 0.04, -0.08, 0, 0, 0, -0.5);
-      const stem = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.05, 5), MAT.woodDark, 0, 0.15, 0);
+      // 玉米棒：逐节收窄的棒身 + 两片苞叶 + 顶部断梗
+      const cob = mesh(lathe([[0.03, -0.11], [0.052, -0.06], [0.056, 0.03], [0.046, 0.09], [0.026, 0.12]], 9), MAT.food, 0, 0, 0);
+      const huskL = mesh(new THREE.ConeGeometry(0.045, 0.15, 5), MAT.leaf, -0.035, -0.06, 0, 0, 0, 0.55);
+      const huskR = mesh(new THREE.ConeGeometry(0.045, 0.15, 5), MAT.leaf, 0.035, -0.06, 0, 0, 0, -0.55);
+      const stem = mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.05, 5), MAT.woodDark, 0, 0.145, 0);
       g.add(cob, huskL, huskR, stem);
       break;
     }
     case 'berry': {
-      const fruitMat = new THREE.MeshStandardMaterial({ color: 0xc23b3e, roughness: 0.6, flatShading: false });
-      const fruit = mesh(new THREE.SphereGeometry(0.06, 10, 8), fruitMat, 0, 0, 0);
-      const stem = mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.05, 5), MAT.woodDark, 0, 0.07, 0);
-      const leaf = mesh(new THREE.ConeGeometry(0.035, 0.07, 5), MAT.leaf, 0.02, 0.1, 0, 0, 0, -0.4);
-      g.add(fruit, stem, leaf);
+      const fruitMat = new THREE.MeshStandardMaterial({ color: 0xbe2f36, roughness: 0.55, metalness: 0 });
+      const fruit = mesh(new THREE.SphereGeometry(0.055, 12, 10), fruitMat, 0, 0, 0);
+      const fruit2 = mesh(new THREE.SphereGeometry(0.04, 10, 8), fruitMat, 0.045, -0.02, 0.02);
+      const stem = mesh(new THREE.CylinderGeometry(0.007, 0.009, 0.05, 5), MAT.woodDark, 0, 0.06, 0);
+      const leaf = mesh(new THREE.ConeGeometry(0.032, 0.07, 5), MAT.leaf, 0.02, 0.085, 0, 0, 0, -0.5);
+      g.add(fruit, fruit2, stem, leaf);
+      break;
+    }
+    case 'torch': {
+      // 短木柄 + 缠布头 + 自发光火焰，配合 Bloom 会有光晕
+      const stick = mesh(handleGeometry(0.34, 0.019, 0.016), MAT.wood, 0, 0, 0);
+      const wrap = mesh(new THREE.CylinderGeometry(0.026, 0.021, 0.06, 8), MAT.rope, 0, 0.27, 0);
+      const flameMat = new THREE.MeshBasicMaterial({ color: 0xffb347 });
+      const flame = mesh(new THREE.ConeGeometry(0.028, 0.08, 7), flameMat, 0, 0.335, 0);
+      const core = mesh(new THREE.SphereGeometry(0.017, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff0b0 }), 0, 0.3, 0);
+      g.add(stick, wrap, flame, core);
       break;
     }
     default: {
-      const stick = mesh(new THREE.CylinderGeometry(0.02, 0.024, 0.4, 8), MAT.wood, 0, 0, 0);
-      g.add(stick);
+      g.add(mesh(handleGeometry(0.42, 0.02, 0.017), MAT.wood, 0, 0, 0));
     }
   }
 
@@ -124,21 +223,21 @@ function buildModel(type) {
 
 // 不同手持物的基础前倾角：工具柄朝前伸（相机 -z），柄尾收向手；盾平持正对镜头。
 const TILT = {
-  pickaxe: -1.22,
-  axe: -1.22,
-  steelAxe: -1.22,
-  spear: -1.35,
+  pickaxe: -0.62,
+  axe: -0.62,
+  steelAxe: -0.62,
+  spear: -1.32,
   shield: 0,
   food: -0.7,
   berry: -0.7,
-  default: -1.15,
+  default: -1.1,
 };
 
-// 绕握柄轴（局部 y）的滚转：镐/斧的工作面原本朝左右(x)，转 90° 让头部朝前(-z)对准星。
+// 绕握柄轴（局部 y）的滚转：镐/斧略微侧转，让刃面朝向镜头可见（转太多会只剩一条边）。
 const ROLL = {
-  pickaxe: Math.PI / 2,
-  axe: Math.PI / 2,
-  steelAxe: Math.PI / 2,
+  pickaxe: 0.16,
+  axe: 0.16,
+  steelAxe: 0.16,
   spear: 0,
   shield: 0,
   food: 0,
@@ -148,32 +247,35 @@ const ROLL = {
 
 // 偏航内拐：绕握持点把工具前端向准星（画面中心）收；镐/斧多拐，矛保持自然前伸。
 const YAW = {
-  pickaxe: 0.28,
-  axe: 0.28,
-  steelAxe: 0.28,
-  spear: 0.1,
+  pickaxe: 0.3,
+  axe: 0.3,
+  steelAxe: 0.3,
+  spear: 0.12,
   shield: 0,
   food: 0.12,
   berry: 0.12,
   default: 0.16,
 };
 
-// 方块风第一人称手臂：手掌包住柄尾，小臂与袖口斜伸向画面底边；与工具挂在同一 grip 下，随前倾一起动。
+// 第一人称手臂：握拳包住柄尾，小臂与袖口斜伸向画面右下
 function buildArm() {
   const g = new THREE.Group();
-  // 手掌（方块），中心即握持点
-  const fist = mesh(new THREE.BoxGeometry(0.09, 0.1, 0.09), MAT.skin, 0, -0.02, 0);
-  // 小臂，略向后下倾斜
-  const fore = mesh(new THREE.BoxGeometry(0.075, 0.28, 0.075), MAT.skin, 0.012, -0.24, 0.02, 0, 0, 0.12);
-  const sleeve = mesh(new THREE.BoxGeometry(0.09, 0.09, 0.09), MAT.sleeve, 0.016, -0.4, 0.025, 0, 0, 0.12);
-  g.add(fist, fore, sleeve);
+  // 手掌：主体 + 指节 + 拇指，比原来的大方块更像手
+  const palm = mesh(new THREE.BoxGeometry(0.072, 0.086, 0.076), MAT.skin, 0, -0.012, 0);
+  const knuckle = mesh(new THREE.BoxGeometry(0.07, 0.026, 0.08), MAT.skin, 0, 0.026, -0.004);
+  const thumb = mesh(new THREE.BoxGeometry(0.026, 0.044, 0.028), MAT.skin, -0.038, 0.01, -0.026, 0.2, 0, -0.35);
+  // 小臂用圆柱而不是方盒：圆柱的明暗过渡更像肢体，方盒看起来像根木头
+  const fore = mesh(new THREE.CylinderGeometry(0.031, 0.038, 0.17, 10), MAT.skin, 0.013, -0.13, 0.016, 0, 0, 0.13);
+  const wrist = mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.022, 10), MAT.rope, 0.016, -0.2, 0.019, 0, 0, 0.13);
+  const cuff = mesh(new THREE.BoxGeometry(0.078, 0.075, 0.078), MAT.sleeve, 0.02, -0.25, 0.022, 0, 0, 0.13);
+  g.add(palm, knuckle, thumb, fore, wrist, cuff);
   return g;
 }
 
 // 手持物：挂在相机右下，切换物品时替换模型，左键触发挥砍动画。
 export function createHeld(camera) {
   const holder = new THREE.Group();
-  holder.position.set(0.34, -0.17, -0.55);
+  holder.position.set(0.37, -0.22, -0.61);
   camera.add(holder);
 
   // grip 承载基础前倾姿态；手臂与工具都挂在 grip 下，保证手握柄不脱节。
@@ -193,8 +295,8 @@ export function createHeld(camera) {
     if (current) { grip.remove(current); current = null; }
     if (!item) return;
     current = buildModel(item.model);
-    // 把模型握把处抬到 grip 原点（手掌位置），柄尾落在掌心
-    current.position.y = 0.18;
+    // 模型的握持原点已在柄尾上方 8cm，无需再抬高；盾/食物居中，给一点纵向偏移
+    current.position.y = item.model === 'shield' || item.model === 'food' || item.model === 'berry' ? 0.06 : 0.01;
     current.rotation.y = ROLL[item.model] ?? ROLL.default;
     grip.rotation.x = TILT[item.model] ?? TILT.default;
     grip.rotation.y = YAW[item.model] ?? YAW.default;
@@ -220,8 +322,8 @@ export function createHeld(camera) {
       const arc = Math.sin(k * Math.PI); // 0 → 1 → 0
       holder.rotation.x = -arc * 0.65;
       holder.rotation.z = Math.sin(k * Math.PI * 2) * 0.05;
-      holder.position.x = 0.34;
-      holder.position.y = -0.17 - arc * 0.06;
+      holder.position.x = 0.37;
+      holder.position.y = -0.22 - arc * 0.06;
       return;
     }
 
@@ -238,8 +340,8 @@ export function createHeld(camera) {
     const walkRz = Math.sin(walkPhase) * 0.04;
     const walkRx = -Math.cos(walkPhase) * 0.03;
 
-    holder.position.x = 0.34 + walkX * moveBlend;
-    holder.position.y = -0.17 + breathY - walkY * moveBlend;
+    holder.position.x = 0.37 + walkX * moveBlend;
+    holder.position.y = -0.22 + breathY - walkY * moveBlend;
     holder.rotation.x = walkRx * moveBlend;
     holder.rotation.z = breathRz + walkRz * moveBlend;
   }
